@@ -1,20 +1,23 @@
-import { useEffect, useState } from "react";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import AdminLogin   from "./pages/AdminLogin";
+import AdminTenants from "./pages/AdminTenants";
+import ProtectedRoute from "./routes/ProtectedRoute";
 
-function App() {
-  const [message, setMessage] = useState("");
-
-  useEffect(() => {
-    fetch("http://localhost:8080/api/test")
-      .then((res) => res.json())
-      .then((data) => setMessage(data.message))
-      .catch((err) => console.error(err));
-  }, []);
-
+export default function App() {
   return (
-    <div>
-      <h1>{message}</h1>
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/admin/login" element={<AdminLogin />} />
+        <Route
+          path="/admin/tenants"
+          element={
+            <ProtectedRoute>
+              <AdminTenants />
+            </ProtectedRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/admin/login" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
-
-export default App;
