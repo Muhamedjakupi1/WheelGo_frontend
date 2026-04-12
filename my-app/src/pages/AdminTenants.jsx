@@ -113,6 +113,17 @@ export default function AdminTenants() {
     const editTitle = modal === "create" ? "Add tenant" : "Edit tenant";
     const submitLabel = modal === "create" ? "Create" : "Save";
 
+    const formatDate = (value) => {
+    if (!value) return "-";
+    return new Date(value).toLocaleString("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+};
+
     return (
         <div style={s.page}>
             <aside style={s.sidebar}>
@@ -142,7 +153,7 @@ export default function AdminTenants() {
                         <table style={s.table}>
                             <thead>
                                 <tr>
-                                    {["Name", "Slug", "Schema", "Plan", "Active", "Actions"].map((h) => (
+                                    {["Name", "Slug", "Schema", "Plan", "Active", "Created At", "Updated At", "Actions"].map((h) => (
                                         <th key={h} style={s.th}>{h}</th>
                                     ))}
                                 </tr>
@@ -167,6 +178,12 @@ export default function AdminTenants() {
                                         <td style={s.td}>
                                             <span style={{ ...s.dot, background: t.active ? "#22c55e" : "#ef4444" }} />
                                         </td>
+                                        <td style={{ ...s.td, ...s.dateCell }}>
+    {formatDate(t.createdAt)}
+</td>
+<td style={{ ...s.td, ...s.dateCell }}>
+    {formatDate(t.updatedAt)}
+</td>
                                         <td style={s.td}>
                                             <div style={s.actions}>
                                                 <button onClick={() => openEdit(t)} style={s.editBtn}>Edit</button>
@@ -256,14 +273,14 @@ const s = {
     nav: { flex: 1 },
     navItemActive: { color: "#60a5fa", background: "#0f1f3a", borderRadius: "8px", padding: "10px 14px", fontSize: "14px", fontWeight: "600", cursor: "pointer" },
     logoutBtn: { background: "none", border: "1px solid #1e2030", borderRadius: "8px", color: "#4a5180", padding: "10px", fontSize: "13px", cursor: "pointer" },
-    main: { flex: 1, padding: "32px 40px", overflowY: "auto" },
+    main: { flex: 1, padding: "24px 40px", overflowY: "auto" },
     header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" },
     pageTitle: { color: "#f0f4ff", fontSize: "24px", fontWeight: "700", margin: 0 },
     pageSubtitle: { color: "#4a5180", fontSize: "13px", marginTop: "4px" },
     addBtn: { background: "linear-gradient(135deg, #0ea5e9, #2563eb)", border: "none", borderRadius: "8px", padding: "11px 20px", color: "#fff", fontWeight: "700", fontSize: "13px", cursor: "pointer" },
-    tableWrap: { background: "#0d0d14", border: "1px solid #1e2030", borderRadius: "12px", overflow: "hidden" },
-    table: { width: "100%", borderCollapse: "collapse" },
-    th: { color: "#4a5180", fontSize: "12px", fontWeight: "600", padding: "14px 20px", textAlign: "left", borderBottom: "1px solid #1e2030", textTransform: "uppercase", letterSpacing: "0.5px" },
+    tableWrap: { background: "#0d0d14", border: "1px solid #1e2030", borderRadius: "16px", overflowX: "auto", overflowY: "hidden", width: "100%" },
+    table: { width: "100%", minWidth: "1250px", borderCollapse: "collapse", tableLayout: "auto" },
+    th: { color: "#4a5180", fontSize: "12px", fontWeight: "600", padding: "14px 20px", textAlign: "center", borderBottom: "1px solid #1e2030", textTransform: "uppercase", letterSpacing: "0.5px" },
     tr: { borderBottom: "1px solid #1e2030" },
     td: { padding: "16px 20px", color: "#8892b0", fontSize: "14px" },
     tenantName: { color: "#f0f4ff", fontWeight: "600" },
