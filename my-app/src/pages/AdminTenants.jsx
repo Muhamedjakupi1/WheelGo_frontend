@@ -7,8 +7,7 @@ import {
     deleteTenant,
 } from "../api/tenantApi";
 import DeleteModal from "../components/DeleteModal";
-import EditModal from "../components/EditModal";
-import { modalStyles as ms } from "../components/modalStyles";
+import CreateAndEditModal from "../components/CreateAndEditModal";
 
 const PLAN_COLORS = {
     FREE: { bg: "#0f2a1a", color: "#22c55e", border: "#14532d" },
@@ -16,16 +15,41 @@ const PLAN_COLORS = {
     ENTERPRISE: { bg: "#2a1a0f", color: "#f59e0b", border: "#78350f" },
 };
 
+const slugify = (value = "") =>
+    value
+        .toLowerCase()
+        .trim()
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "");
+
 export default function AdminTenants() {
     const [tenants, setTenants] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [modal, setModal] = useState(null);
+    const [modal, setModal] = useState(null); // null | "create" | "edit"
     const [selected, setSelected] = useState(null);
     const [deleting, setDeleting] = useState(null);
     const [deleteError, setDeleteError] = useState("");
-    const [form, setForm] = useState({ name: "", slug: "", plan: "FREE", active: true });
+    const [form, setForm] = useState({
+        name: "",
+        slug: "",
+        plan: "FREE",
+        active: true,
+    });
     const [error, setError] = useState("");
+    const [alert, setAlert] = useState({ type: "", message: "" });
+
     const navigate = useNavigate();
+
+    const showAlert = (type, message) => {
+        setAlert({ type, message });
+        setTimeout(() => {
+            setAlert((current) =>
+                current.message === message ? { type: "", message: "" } : current
+            );
+        }, 3000);
+    };
 
     const load = async () => {
         try {
@@ -39,7 +63,9 @@ export default function AdminTenants() {
         }
     };
 
-    useEffect(() => { load(); }, []);
+    useEffect(() => {
+        load();
+    }, []);
 
     const logout = () => {
         localStorage.removeItem("admin_auth");
@@ -72,35 +98,35 @@ export default function AdminTenants() {
 
     const handleSubmit = async () => {
         setError("");
+
         try {
             if (modal === "create") {
                 await createTenant({
-                    name: form.name,
-                    slug: form.slug,
+                    name: form.name.trim(),
+                    slug: slugify(form.slug),
                     plan: form.plan,
                 });
+                closeModal();
+                await load();
+                showAlert("success", "Tenant created successfully.");
             } else {
                 await updateTenant(selected.id, {
-                    name: form.name,
+                    name: form.name.trim(),
                     plan: form.plan,
-                    isActive: form.active, // 🔥 IMPORTANT FIX
+                    isActive: form.active,
                 });
+                closeModal();
+                await load();
+                showAlert("success", "Tenant updated successfully.");
             }
-            closeModal();
-            load();
         } catch (err) {
-            setError(err.response?.data?.message || "Something went wrong while saving.");
-        }
-    };
+            const message =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                "Something went wrong while saving.";
 
-    const handleDelete = async () => {
-        setDeleteError("");
-        try {
-            await deleteTenant(deleting.id);
-            setDeleting(null);
-            load();
-        } catch {
-            setDeleteError("Failed to delete tenant.");
+            setError(message);
+            showAlert("error", message);
         }
     };
 
@@ -109,20 +135,39 @@ export default function AdminTenants() {
         setDeleting(tenant);
     };
 
-    const editModalOpen = Boolean(modal);
-    const editTitle = modal === "create" ? "Add tenant" : "Edit tenant";
-    const submitLabel = modal === "create" ? "Create" : "Save";
+    const handleDelete = async () => {
+        setDeleteError("");
+
+        try {
+            await deleteTenant(deleting.id);
+            setDeleting(null);
+            await load();
+            showAlert("success", "Tenant deleted successfully.");
+        } catch (err) {
+            const message =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                "Failed to delete tenant.";
+
+            setDeleteError(message);
+            showAlert("error", message);
+        }
+    };
 
     const formatDate = (value) => {
-    if (!value) return "-";
-    return new Date(value).toLocaleString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-    });
-};
+        if (!value) return "-";
+        return new Date(value).toLocaleString("en-GB", {
+            day: "2-digit",
+            month: "2-digit",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+        });
+    };
+
+    const modalOpen = Boolean(modal);
+    const modalTitle = modal === "create" ? "Add Tenant" : "Edit Tenant";
+    const submitLabel = modal === "create" ? "Create" : "Save";
 
     return (
         <div style={s.page}>
@@ -131,10 +176,14 @@ export default function AdminTenants() {
                     <div style={s.logoBox}>WG</div>
                     <span style={s.logoText}>WheelGo</span>
                 </div>
+
                 <nav style={s.nav}>
                     <div style={s.navItemActive}>Tenants</div>
                 </nav>
-                <button type="button" onClick={logout} style={s.logoutBtn}>Log out</button>
+
+                <button type="button" onClick={logout} style={s.logoutBtn}>
+                    Log out
+                </button>
             </aside>
 
             <main style={s.main}>
@@ -143,8 +192,22 @@ export default function AdminTenants() {
                         <h1 style={s.pageTitle}>Tenants</h1>
                         <p style={s.pageSubtitle}>{tenants.length} active companies</p>
                     </div>
-                    <button type="button" onClick={openCreate} style={s.addBtn}>+ Add tenant</button>
+
+                    <button type="button" onClick={openCreate} style={s.addBtn}>
+                        + Add Tenant
+                    </button>
                 </div>
+
+                {alert.message && (
+                    <div
+                        style={{
+                            ...s.alert,
+                            ...(alert.type === "success" ? s.alertSuccess : s.alertError),
+                        }}
+                    >
+                        {alert.message}
+                    </div>
+                )}
 
                 {loading ? (
                     <p style={{ color: "#4a5180" }}>Loading...</p>
@@ -153,8 +216,19 @@ export default function AdminTenants() {
                         <table style={s.table}>
                             <thead>
                                 <tr>
-                                    {["Name", "Slug", "Schema", "Plan", "Active", "Created At", "Updated At", "Actions"].map((h) => (
-                                        <th key={h} style={s.th}>{h}</th>
+                                    {[
+                                        "Name",
+                                        "Slug",
+                                        "Schema",
+                                        "Plan",
+                                        "Active",
+                                        "Created At",
+                                        "Updated At",
+                                        "Actions",
+                                    ].map((h) => (
+                                        <th key={h} style={s.th}>
+                                            {h}
+                                        </th>
                                     ))}
                                 </tr>
                             </thead>
@@ -176,18 +250,31 @@ export default function AdminTenants() {
                                             </span>
                                         </td>
                                         <td style={s.td}>
-                                            <span style={{ ...s.dot, background: t.active ? "#22c55e" : "#ef4444" }} />
+                                            <span
+                                                style={{
+                                                    ...s.dot,
+                                                    background: t.active ? "#22c55e" : "#ef4444",
+                                                }}
+                                            />
                                         </td>
-                                        <td style={{ ...s.td, ...s.dateCell }}>
-    {formatDate(t.createdAt)}
-</td>
-<td style={{ ...s.td, ...s.dateCell }}>
-    {formatDate(t.updatedAt)}
-</td>
+                                        <td style={s.td}>{formatDate(t.createdAt)}</td>
+                                        <td style={s.td}>{formatDate(t.updatedAt)}</td>
                                         <td style={s.td}>
                                             <div style={s.actions}>
-                                                <button onClick={() => openEdit(t)} style={s.editBtn}>Edit</button>
-                                                <button onClick={() => openDelete(t)} style={s.deleteBtn}>Delete</button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openEdit(t)}
+                                                    style={s.editBtn}
+                                                >
+                                                    Edit
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => openDelete(t)}
+                                                    style={s.deleteBtn}
+                                                >
+                                                    Delete
+                                                </button>
                                             </div>
                                         </td>
                                     </tr>
@@ -197,60 +284,25 @@ export default function AdminTenants() {
                     </div>
                 )}
 
-                {error && !editModalOpen && (
-                    <p style={{ ...ms.error, marginTop: "12px" }}>{error}</p>
+                {error && !modalOpen && (
+                    <p style={{ color: "#ef4444", marginTop: "12px", fontSize: "13px" }}>
+                        {error}
+                    </p>
                 )}
             </main>
 
-            <EditModal
-                open={editModalOpen}
+            <CreateAndEditModal
+                open={modalOpen}
                 onClose={closeModal}
                 onSubmit={handleSubmit}
-                title={editTitle}
+                title={modalTitle}
                 submitLabel={submitLabel}
                 cancelLabel="Cancel"
                 error={error}
-            >
-                <label style={ms.label}>Name</label>
-                <input
-                    style={ms.input}
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    placeholder="Enter your tenant name"
-                />
-
-                <label style={ms.label}>Slug</label>
-                <input
-                    style={ms.input}
-                    value={form.slug}
-                    disabled={modal === "edit"}
-                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                    placeholder="Enter your tenant slug"
-                />
-
-                <label style={ms.label}>Plan</label>
-                <select
-                    style={ms.select}
-                    value={form.plan}
-                    onChange={(e) => setForm({ ...form, plan: e.target.value })}
-                >
-                    <option value="FREE">FREE</option>
-                    <option value="PRO">PRO</option>
-                    <option value="ENTERPRISE">ENTERPRISE</option>
-                </select>
-
-                <label style={ms.label}>Status</label>
-                <select
-                    style={ms.select}
-                    value={form.active ? "true" : "false"}
-                    onChange={(e) =>
-                        setForm({ ...form, active: e.target.value === "true" })
-                    }
-                >
-                    <option value="true">Active</option>
-                    <option value="false">Inactive</option>
-                </select>
-            </EditModal>
+                form={form}
+                setForm={setForm}
+                isEdit={modal === "edit"}
+            />
 
             <DeleteModal
                 open={Boolean(deleting)}
@@ -265,29 +317,195 @@ export default function AdminTenants() {
 }
 
 const s = {
-    page: { display: "flex", minHeight: "100vh", background: "#0a0a0f", fontFamily: "'Inter', sans-serif" },
-    sidebar: { width: "220px", background: "#0d0d14", borderRight: "1px solid #1e2030", display: "flex", flexDirection: "column", padding: "24px 16px" },
-    sidebarLogo: { display: "flex", alignItems: "center", gap: "10px", marginBottom: "32px" },
-    logoBox: { width: "36px", height: "36px", borderRadius: "8px", background: "linear-gradient(135deg, #0ea5e9, #2563eb)", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: "800", fontSize: "14px", color: "#fff" },
-    logoText: { color: "#f0f4ff", fontWeight: "700", fontSize: "16px" },
+    page: {
+        display: "flex",
+        minHeight: "100vh",
+        background: "#0a0a0f",
+        fontFamily: "'Inter', sans-serif",
+    },
+    sidebar: {
+        width: "220px",
+        background: "#0d0d14",
+        borderRight: "1px solid #1e2030",
+        display: "flex",
+        flexDirection: "column",
+        padding: "24px 16px",
+    },
+    sidebarLogo: {
+        display: "flex",
+        alignItems: "center",
+        gap: "10px",
+        marginBottom: "32px",
+    },
+    logoBox: {
+        width: "36px",
+        height: "36px",
+        borderRadius: "8px",
+        background: "linear-gradient(135deg, #0ea5e9, #2563eb)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: "800",
+        fontSize: "14px",
+        color: "#fff",
+    },
+    logoText: {
+        color: "#f0f4ff",
+        fontWeight: "700",
+        fontSize: "16px",
+    },
     nav: { flex: 1 },
-    navItemActive: { color: "#60a5fa", background: "#0f1f3a", borderRadius: "8px", padding: "10px 14px", fontSize: "14px", fontWeight: "600", cursor: "pointer" },
-    logoutBtn: { background: "none", border: "1px solid #1e2030", borderRadius: "8px", color: "#4a5180", padding: "10px", fontSize: "13px", cursor: "pointer" },
-    main: { flex: 1, padding: "24px 40px", overflowY: "auto" },
-    header: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "28px" },
-    pageTitle: { color: "#f0f4ff", fontSize: "24px", fontWeight: "700", margin: 0 },
-    pageSubtitle: { color: "#4a5180", fontSize: "13px", marginTop: "4px" },
-    addBtn: { background: "linear-gradient(135deg, #0ea5e9, #2563eb)", border: "none", borderRadius: "8px", padding: "11px 20px", color: "#fff", fontWeight: "700", fontSize: "13px", cursor: "pointer" },
-    tableWrap: { background: "#0d0d14", border: "1px solid #1e2030", borderRadius: "16px", overflowX: "auto", overflowY: "hidden", width: "100%" },
-    table: { width: "100%", minWidth: "1250px", borderCollapse: "collapse", tableLayout: "auto" },
-    th: { color: "#4a5180", fontSize: "12px", fontWeight: "600", padding: "14px 20px", textAlign: "center", borderBottom: "1px solid #1e2030", textTransform: "uppercase", letterSpacing: "0.5px" },
-    tr: { borderBottom: "1px solid #1e2030" },
-    td: { padding: "16px 20px", color: "#8892b0", fontSize: "14px" },
-    tenantName: { color: "#f0f4ff", fontWeight: "600" },
-    code: { background: "#0a0a0f", border: "1px solid #1e2030", borderRadius: "4px", padding: "2px 8px", fontSize: "12px", color: "#60a5fa", fontFamily: "monospace" },
-    badge: { borderRadius: "6px", padding: "3px 10px", fontSize: "11px", fontWeight: "700", border: "1px solid", letterSpacing: "0.5px" },
-    dot: { display: "inline-block", width: "8px", height: "8px", borderRadius: "50%" },
-    actions: { display: "flex", gap: "8px" },
-    editBtn: { background: "#0f1f3a", border: "1px solid #1e3a5f", borderRadius: "6px", color: "#60a5fa", padding: "6px 14px", fontSize: "12px", fontWeight: "600", cursor: "pointer" },
-    deleteBtn: { background: "#1a0a0a", border: "1px solid #3f1a1a", borderRadius: "6px", color: "#ef4444", padding: "6px 14px", fontSize: "12px", fontWeight: "600", cursor: "pointer" },
+    navItemActive: {
+        color: "#60a5fa",
+        background: "#0f1f3a",
+        borderRadius: "8px",
+        padding: "10px 14px",
+        fontSize: "14px",
+        fontWeight: "600",
+        cursor: "pointer",
+    },
+    logoutBtn: {
+        background: "none",
+        border: "1px solid #1e2030",
+        borderRadius: "8px",
+        color: "#4a5180",
+        padding: "10px",
+        fontSize: "13px",
+        cursor: "pointer",
+    },
+    main: {
+        flex: 1,
+        padding: "24px 40px",
+        overflowY: "auto",
+    },
+    header: {
+        display: "flex",
+        justifyContent: "space-between",
+        alignItems: "center",
+        marginBottom: "28px",
+    },
+    pageTitle: {
+        color: "#f0f4ff",
+        fontSize: "24px",
+        fontWeight: "700",
+        margin: 0,
+    },
+    pageSubtitle: {
+        color: "#4a5180",
+        fontSize: "13px",
+        marginTop: "4px",
+    },
+    addBtn: {
+        background: "linear-gradient(135deg, #0ea5e9, #2563eb)",
+        border: "none",
+        borderRadius: "8px",
+        padding: "11px 20px",
+        color: "#fff",
+        fontWeight: "700",
+        fontSize: "13px",
+        cursor: "pointer",
+    },
+    alert: {
+        marginBottom: "16px",
+        padding: "12px 14px",
+        borderRadius: "10px",
+        fontSize: "13px",
+        fontWeight: "600",
+        border: "1px solid",
+    },
+    alertSuccess: {
+        background: "#0f2a1a",
+        color: "#22c55e",
+        borderColor: "#14532d",
+    },
+    alertError: {
+        background: "#2a0f0f",
+        color: "#ef4444",
+        borderColor: "#5f1e1e",
+    },
+    tableWrap: {
+        background: "#0d0d14",
+        border: "1px solid #1e2030",
+        borderRadius: "16px",
+        overflowX: "auto",
+        overflowY: "hidden",
+        width: "100%",
+    },
+    table: {
+        width: "100%",
+        minWidth: "1250px",
+        borderCollapse: "collapse",
+        tableLayout: "auto",
+    },
+    th: {
+        color: "#4a5180",
+        fontSize: "12px",
+        fontWeight: "600",
+        padding: "14px 20px",
+        textAlign: "center",
+        borderBottom: "1px solid #1e2030",
+        textTransform: "uppercase",
+        letterSpacing: "0.5px",
+    },
+    tr: {
+        borderBottom: "1px solid #1e2030",
+    },
+    td: {
+        padding: "16px 20px",
+        color: "#8892b0",
+        fontSize: "14px",
+        textAlign: "center",
+    },
+    tenantName: {
+        color: "#f0f4ff",
+        fontWeight: "600",
+    },
+    code: {
+        background: "#0a0a0f",
+        border: "1px solid #1e2030",
+        borderRadius: "4px",
+        padding: "2px 8px",
+        fontSize: "12px",
+        color: "#60a5fa",
+        fontFamily: "monospace",
+    },
+    badge: {
+        borderRadius: "6px",
+        padding: "3px 10px",
+        fontSize: "11px",
+        fontWeight: "700",
+        border: "1px solid",
+        letterSpacing: "0.5px",
+    },
+    dot: {
+        display: "inline-block",
+        width: "8px",
+        height: "8px",
+        borderRadius: "50%",
+    },
+    actions: {
+        display: "flex",
+        gap: "8px",
+        justifyContent: "center",
+    },
+    editBtn: {
+        background: "#0f1f3a",
+        border: "1px solid #1e3a5f",
+        borderRadius: "6px",
+        color: "#60a5fa",
+        padding: "6px 14px",
+        fontSize: "12px",
+        fontWeight: "600",
+        cursor: "pointer",
+    },
+    deleteBtn: {
+        background: "#1a0a0a",
+        border: "1px solid #3f1a1a",
+        borderRadius: "6px",
+        color: "#ef4444",
+        padding: "6px 14px",
+        fontSize: "12px",
+        fontWeight: "600",
+        cursor: "pointer",
+    },
 };

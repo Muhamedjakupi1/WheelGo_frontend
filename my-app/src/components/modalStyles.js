@@ -125,4 +125,7 @@ export const modalStyles = {
         fontWeight: "700",
         cursor: "pointer",
     },
+    not_allowed: {
+        cursor: "not-allowed",
+    }
 };
