@@ -6,6 +6,9 @@ import {
     updateTenant,
     deleteTenant,
 } from "../api/tenantApi";
+import DeleteModal from "../components/DeleteModal";
+import EditModal from "../components/EditModal";
+import { modalStyles as ms } from "../components/modalStyles";
 
 const PLAN_COLORS = {
     FREE: { bg: "#0f2a1a", color: "#22c55e", border: "#14532d" },
@@ -19,6 +22,7 @@ export default function AdminTenants() {
     const [modal, setModal] = useState(null); // null | "create" | "edit"
     const [selected, setSelected] = useState(null);
     const [deleting, setDeleting] = useState(null);
+    const [deleteError, setDeleteError] = useState("");
     const [form, setForm] = useState({ name: "", slug: "", plan: "FREE" });
     const [error, setError] = useState("");
     const navigate = useNavigate();
@@ -27,8 +31,9 @@ export default function AdminTenants() {
         try {
             const res = await getAllTenants();
             setTenants(res.data);
+            setError("");
         } catch {
-            setError("Gabim duke ngarkuar tenantët.");
+            setError("Failed to load tenants.");
         } finally {
             setLoading(false);
         }
@@ -60,8 +65,7 @@ export default function AdminTenants() {
         setError("");
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
+    const handleSubmit = async () => {
         setError("");
         try {
             if (modal === "create") {
@@ -72,54 +76,60 @@ export default function AdminTenants() {
             closeModal();
             load();
         } catch (err) {
-            setError(err.response?.data?.message || "Gabim gjatë ruajtjes.");
+            setError(err.response?.data?.message || "Something went wrong while saving.");
         }
     };
 
     const handleDelete = async () => {
+        setDeleteError("");
         try {
             await deleteTenant(deleting.id);
             setDeleting(null);
             load();
         } catch {
-            setError("Gabim gjatë fshirjes.");
+            setDeleteError("Failed to delete tenant.");
         }
     };
 
+    const openDelete = (tenant) => {
+        setDeleteError("");
+        setDeleting(tenant);
+    };
+
+    const editModalOpen = Boolean(modal);
+    const editTitle = modal === "create" ? "Add tenant" : "Edit tenant";
+    const submitLabel = modal === "create" ? "Create" : "Save";
+
     return (
         <div style={s.page}>
-            {/* Sidebar */}
             <aside style={s.sidebar}>
                 <div style={s.sidebarLogo}>
                     <div style={s.logoBox}>WG</div>
                     <span style={s.logoText}>WheelGo</span>
                 </div>
                 <nav style={s.nav}>
-                    <div style={s.navItemActive}>Tenantët</div>
+                    <div style={s.navItemActive}>Tenants</div>
                 </nav>
-                <button onClick={logout} style={s.logoutBtn}>Dil</button>
+                <button type="button" onClick={logout} style={s.logoutBtn}>Log out</button>
             </aside>
 
-            {/* Main */}
             <main style={s.main}>
-                {/* Header */}
                 <div style={s.header}>
                     <div>
-                        <h1 style={s.pageTitle}>Tenantët</h1>
-                        <p style={s.pageSubtitle}>{tenants.length} kompani aktive</p>
+                        <h1 style={s.pageTitle}>Tenants</h1>
+                        <p style={s.pageSubtitle}>{tenants.length} active companies</p>
                     </div>
-                    <button onClick={openCreate} style={s.addBtn}>+ Shto Tenant</button>
+                    <button type="button" onClick={openCreate} style={s.addBtn}>+ Add tenant</button>
                 </div>
 
-                {/* Table */}
                 {loading ? (
-                    <p style={{ color: "#4a5180" }}>Duke ngarkuar...</p>
+                    <p style={{ color: "#4a5180" }}>Loading...</p>
                 ) : (
                     <div style={s.tableWrap}>
                         <table style={s.table}>
                             <thead>
                                 <tr>
-                                    {["Emri", "Slug", "Schema", "Plani", "Aktiv", "Veprime"].map(h => (
+                                    {["Name", "Slug", "Schema", "Plan", "Active", "Actions"].map((h) => (
                                         <th key={h} style={s.th}>{h}</th>
                                     ))}
                                 </tr>
@@ -146,11 +156,11 @@ export default function AdminTenants() {
                                         </td>
                                         <td style={s.td}>
                                             <div style={s.actions}>
-                                                <button onClick={() => openEdit(t)} style={s.editBtn}>
-                                                    Edito
+                                                <button type="button" onClick={() => openEdit(t)} style={s.editBtn}>
+                                                    Edit
                                                 </button>
-                                                <button onClick={() => setDeleting(t)} style={s.deleteBtn}>
-                                                    Fshi
+                                                <button type="button" onClick={() => openDelete(t)} style={s.deleteBtn}>
+                                                    Delete
                                                 </button>
                                             </div>
                                         </td>
@@ -160,81 +170,64 @@ export default function AdminTenants() {
                         </table>
                     </div>
                 )}
+
+                {error && !editModalOpen && (
+                    <p style={{ ...ms.error, marginTop: "12px" }}>{error}</p>
+                )}
             </main>
 
-            {/* Create / Edit Modal */}
-            {modal && (
-                <div style={s.overlay}>
-                    <div style={s.modal}>
-                        <h2 style={s.modalTitle}>
-                            {modal === "create" ? "Shto Tenant të Ri" : "Edito Tenant"}
-                        </h2>
-                        <form onSubmit={handleSubmit} style={s.modalForm}>
-                            <label style={s.label}>Emri</label>
-                            <input
-                                style={s.input}
-                                placeholder="Hertz Kosovo"
-                                value={form.name}
-                                onChange={(e) => setForm({ ...form, name: e.target.value })}
-                                required
-                            />
-                            <label style={s.label}>Slug</label>
-                            <input
-                                style={s.input}
-                                placeholder="hertz"
-                                value={form.slug}
-                                onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                                required
-                                disabled={modal === "edit"}
-                            />
-                            <label style={s.label}>Plani</label>
-                            <select
-                                style={s.select}
-                                value={form.plan}
-                                onChange={(e) => setForm({ ...form, plan: e.target.value })}
-                            >
-                                <option value="FREE">FREE</option>
-                                <option value="PRO">PRO</option>
-                                <option value="ENTERPRISE">ENTERPRISE</option>
-                            </select>
-                            {error && <p style={s.error}>{error}</p>}
-                            <div style={s.modalActions}>
-                                <button type="button" onClick={closeModal} style={s.cancelBtn}>
-                                    Anulo
-                                </button>
-                                <button type="submit" style={s.saveBtn}>
-                                    {modal === "create" ? "Krijo" : "Ruaj"}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+            <EditModal
+                open={editModalOpen}
+                onClose={closeModal}
+                onSubmit={handleSubmit}
+                title={editTitle}
+                submitLabel={submitLabel}
+                cancelLabel="Cancel"
+                error={error}
+            >
+                <label style={ms.label} htmlFor="tenant-name">Name</label>
+                <input
+                    id="tenant-name"
+                    style={ms.input}
+                    placeholder="Hertz Kosovo"
+                    value={form.name}
+                    onChange={(e) => setForm({ ...form, name: e.target.value })}
+                    required
+                />
+                <label style={ms.label} htmlFor="tenant-slug">Slug</label>
+                <input
+                    id="tenant-slug"
+                    style={ms.input}
+                    placeholder="hertz"
+                    value={form.slug}
+                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                    required
+                    disabled={modal === "edit"}
+                />
+                <label style={ms.label} htmlFor="tenant-plan">Plan</label>
+                <select
+                    id="tenant-plan"
+                    style={ms.select}
+                    value={form.plan}
+                    onChange={(e) => setForm({ ...form, plan: e.target.value })}
+                >
+                    <option value="FREE">FREE</option>
+                    <option value="PRO">PRO</option>
+                    <option value="ENTERPRISE">ENTERPRISE</option>
+                </select>
+            </EditModal>
 
-            {/* Delete Confirm Modal */}
-            {deleting && (
-                <div style={s.overlay}>
-                    <div style={s.modal}>
-                        <h2 style={{ ...s.modalTitle, color: "#ef4444" }}>Fshi Tenant</h2>
-                        <p style={{ color: "#8892b0", fontSize: "14px", lineHeight: "1.6" }}>
-                            A jeni të sigurt që doni të fshini{" "}
-                            <strong style={{ color: "#f0f4ff" }}>{deleting.name}</strong>?
-                            <br />
-                            Ky veprim do të fshijë komplet schemën{" "}
-                            <code style={s.code}>{deleting.schemaName}</code> dhe të gjitha
-                            të dhënat brenda saj.
-                        </p>
-                        <div style={s.modalActions}>
-                            <button onClick={() => setDeleting(null)} style={s.cancelBtn}>
-                                Anulo
-                            </button>
-                            <button onClick={handleDelete} style={s.deleteBtnModal}>
-                                Po, Fshi
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            <DeleteModal
+                open={Boolean(deleting)}
+                onClose={() => {
+                    setDeleting(null);
+                    setDeleteError("");
+                }}
+                onConfirm={handleDelete}
+                itemName={deleting?.name}
+                schemaName={deleting?.schemaName}
+                error={deleteError}
+            />
         </div>
     );
 }
@@ -265,16 +258,4 @@ const s = {
     actions: { display: "flex", gap: "8px" },
     editBtn: { background: "#0f1f3a", border: "1px solid #1e3a5f", borderRadius: "6px", color: "#60a5fa", padding: "6px 14px", fontSize: "12px", fontWeight: "600", cursor: "pointer" },
     deleteBtn: { background: "#1a0a0a", border: "1px solid #3f1a1a", borderRadius: "6px", color: "#ef4444", padding: "6px 14px", fontSize: "12px", fontWeight: "600", cursor: "pointer" },
-    overlay: { position: "fixed", inset: 0, background: "rgba(0,0,0,0.7)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 100 },
-    modal: { background: "#111118", border: "1px solid #1e2030", borderRadius: "16px", padding: "32px", width: "100%", maxWidth: "440px" },
-    modalTitle: { color: "#f0f4ff", fontSize: "18px", fontWeight: "700", margin: "0 0 20px" },
-    modalForm: { display: "flex", flexDirection: "column", gap: "12px" },
-    label: { color: "#4a5180", fontSize: "12px", fontWeight: "600", textTransform: "uppercase", letterSpacing: "0.5px" },
-    input: { background: "#0d0d14", border: "1px solid #1e2030", borderRadius: "8px", padding: "11px 14px", color: "#f0f4ff", fontSize: "14px", outline: "none" },
-    select: { background: "#0d0d14", border: "1px solid #1e2030", borderRadius: "8px", padding: "11px 14px", color: "#f0f4ff", fontSize: "14px", outline: "none" },
-    error: { color: "#ef4444", fontSize: "13px", margin: 0 },
-    modalActions: { display: "flex", gap: "10px", marginTop: "8px" },
-    cancelBtn: { flex: 1, background: "none", border: "1px solid #1e2030", borderRadius: "8px", color: "#4a5180", padding: "11px", fontSize: "14px", cursor: "pointer" },
-    saveBtn: { flex: 1, background: "linear-gradient(135deg, #0ea5e9, #2563eb)", border: "none", borderRadius: "8px", color: "#fff", padding: "11px", fontSize: "14px", fontWeight: "700", cursor: "pointer" },
-    deleteBtnModal: { flex: 1, background: "#1a0a0a", border: "1px solid #ef4444", borderRadius: "8px", color: "#ef4444", padding: "11px", fontSize: "14px", fontWeight: "700", cursor: "pointer" },
 };

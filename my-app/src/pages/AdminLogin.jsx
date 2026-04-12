@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-const ADMIN_PASSWORD = "wheelgo2026";
+const ADMIN_PASSWORD = import.meta.env.VITE_ADMIN_LOGIN_PASSWORD;
 
 export default function AdminLogin() {
     const [password, setPassword] = useState("");
@@ -14,7 +14,7 @@ export default function AdminLogin() {
             localStorage.setItem("admin_auth", "true");
             navigate("/admin/tenants");
         } else {
-            setError("Fjalëkalimi është i gabuar.");
+            setError("Incorrect password.");
         }
     };
 
@@ -27,14 +27,14 @@ export default function AdminLogin() {
                 <form onSubmit={handleLogin} style={styles.form}>
                     <input
                         type="password"
-                        placeholder="Fjalëkalimi"
+                        placeholder="Password"
                         value={password}
                         onChange={(e) => setPassword(e.target.value)}
                         style={styles.input}
                     />
                     {error && <p style={styles.error}>{error}</p>}
                     <button type="submit" style={styles.button}>
-                        Hyr
+                        Sign in
                     </button>
                 </form>
             </div>
