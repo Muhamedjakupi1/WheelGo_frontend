@@ -19,11 +19,11 @@ const PLAN_COLORS = {
 export default function AdminTenants() {
     const [tenants, setTenants] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [modal, setModal] = useState(null); // null | "create" | "edit"
+    const [modal, setModal] = useState(null);
     const [selected, setSelected] = useState(null);
     const [deleting, setDeleting] = useState(null);
     const [deleteError, setDeleteError] = useState("");
-    const [form, setForm] = useState({ name: "", slug: "", plan: "FREE" });
+    const [form, setForm] = useState({ name: "", slug: "", plan: "FREE", active: true });
     const [error, setError] = useState("");
     const navigate = useNavigate();
 
@@ -47,14 +47,19 @@ export default function AdminTenants() {
     };
 
     const openCreate = () => {
-        setForm({ name: "", slug: "", plan: "FREE" });
+        setForm({ name: "", slug: "", plan: "FREE", active: true });
         setError("");
         setModal("create");
     };
 
     const openEdit = (tenant) => {
         setSelected(tenant);
-        setForm({ name: tenant.name, slug: tenant.slug, plan: tenant.plan });
+        setForm({
+            name: tenant.name,
+            slug: tenant.slug,
+            plan: tenant.plan,
+            active: Boolean(tenant.active),
+        });
         setError("");
         setModal("edit");
     };
@@ -69,9 +74,17 @@ export default function AdminTenants() {
         setError("");
         try {
             if (modal === "create") {
-                await createTenant(form);
+                await createTenant({
+                    name: form.name,
+                    slug: form.slug,
+                    plan: form.plan,
+                });
             } else {
-                await updateTenant(selected.id, form);
+                await updateTenant(selected.id, {
+                    name: form.name,
+                    plan: form.plan,
+                    isActive: form.active, // 🔥 IMPORTANT FIX
+                });
             }
             closeModal();
             load();
@@ -156,12 +169,8 @@ export default function AdminTenants() {
                                         </td>
                                         <td style={s.td}>
                                             <div style={s.actions}>
-                                                <button type="button" onClick={() => openEdit(t)} style={s.editBtn}>
-                                                    Edit
-                                                </button>
-                                                <button type="button" onClick={() => openDelete(t)} style={s.deleteBtn}>
-                                                    Delete
-                                                </button>
+                                                <button onClick={() => openEdit(t)} style={s.editBtn}>Edit</button>
+                                                <button onClick={() => openDelete(t)} style={s.deleteBtn}>Delete</button>
                                             </div>
                                         </td>
                                     </tr>
@@ -185,28 +194,25 @@ export default function AdminTenants() {
                 cancelLabel="Cancel"
                 error={error}
             >
-                <label style={ms.label} htmlFor="tenant-name">Name</label>
+                <label style={ms.label}>Name</label>
                 <input
-                    id="tenant-name"
                     style={ms.input}
-                    placeholder="Hertz Kosovo"
                     value={form.name}
                     onChange={(e) => setForm({ ...form, name: e.target.value })}
-                    required
+                    placeholder="Enter your tenant name"
                 />
-                <label style={ms.label} htmlFor="tenant-slug">Slug</label>
+
+                <label style={ms.label}>Slug</label>
                 <input
-                    id="tenant-slug"
                     style={ms.input}
-                    placeholder="hertz"
                     value={form.slug}
-                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
-                    required
                     disabled={modal === "edit"}
+                    onChange={(e) => setForm({ ...form, slug: e.target.value })}
+                    placeholder="Enter your tenant slug"
                 />
-                <label style={ms.label} htmlFor="tenant-plan">Plan</label>
+
+                <label style={ms.label}>Plan</label>
                 <select
-                    id="tenant-plan"
                     style={ms.select}
                     value={form.plan}
                     onChange={(e) => setForm({ ...form, plan: e.target.value })}
@@ -215,14 +221,23 @@ export default function AdminTenants() {
                     <option value="PRO">PRO</option>
                     <option value="ENTERPRISE">ENTERPRISE</option>
                 </select>
+
+                <label style={ms.label}>Status</label>
+                <select
+                    style={ms.select}
+                    value={form.active ? "true" : "false"}
+                    onChange={(e) =>
+                        setForm({ ...form, active: e.target.value === "true" })
+                    }
+                >
+                    <option value="true">Active</option>
+                    <option value="false">Inactive</option>
+                </select>
             </EditModal>
 
             <DeleteModal
                 open={Boolean(deleting)}
-                onClose={() => {
-                    setDeleting(null);
-                    setDeleteError("");
-                }}
+                onClose={() => setDeleting(null)}
                 onConfirm={handleDelete}
                 itemName={deleting?.name}
                 schemaName={deleting?.schemaName}
