@@ -76,7 +76,8 @@ export default function CreateAndEditModal({
                         onChange={(e) => setForm({ ...form, plan: e.target.value })}
                     >
                         <option value="FREE">FREE</option>
-                        <option value="PRO">PRO</option>
+                        <option value="BASIC">BASIC</option>
+                        <option value="PREMIUM">PREMIUM</option>
                         <option value="ENTERPRISE">ENTERPRISE</option>
                     </select>
 

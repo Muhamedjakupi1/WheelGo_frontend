@@ -11,8 +11,9 @@ import CreateAndEditModal from "../components/CreateAndEditModal";
 
 const PLAN_COLORS = {
     FREE: { bg: "#0f2a1a", color: "#22c55e", border: "#14532d" },
-    PRO: { bg: "#0f1f3a", color: "#60a5fa", border: "#1e3a5f" },
-    ENTERPRISE: { bg: "#2a1a0f", color: "#f59e0b", border: "#78350f" },
+    BASIC: { bg: "#0f1f3a", color: "#60a5fa", border: "#1e3a5f" },
+    PREMIUM: { bg: "#2a1a0f", color: "#f59e0b", border: "#78350f" },
+    ENTERPRISE: { bg: "#2a0f2a", color: "#e879f9", border: "#701a75" },
 };
 
 const slugify = (value = "") =>
