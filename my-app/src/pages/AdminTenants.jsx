@@ -25,6 +25,15 @@ const slugify = (value = "") =>
         .replace(/-+/g, "-")
         .replace(/^-+|-+$/g, "");
 
+const emptyCreateForm = {
+    name: "",
+    slug: "",
+    plan: "FREE",
+    active: true,
+    adminEmail: "",
+    adminPassword: "",
+};
+
 export default function AdminTenants() {
     const [tenants, setTenants] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -32,12 +41,7 @@ export default function AdminTenants() {
     const [selected, setSelected] = useState(null);
     const [deleting, setDeleting] = useState(null);
     const [deleteError, setDeleteError] = useState("");
-    const [form, setForm] = useState({
-        name: "",
-        slug: "",
-        plan: "FREE",
-        active: true,
-    });
+    const [form, setForm] = useState(emptyCreateForm);
     const [error, setError] = useState("");
     const [alert, setAlert] = useState({ type: "", message: "" });
 
@@ -69,12 +73,13 @@ export default function AdminTenants() {
     }, []);
 
     const logout = () => {
-        localStorage.removeItem("admin_auth");
-        navigate("/admin/login");
+        localStorage.removeItem("auth");
+        localStorage.removeItem("token");
+        navigate("/login");
     };
 
     const openCreate = () => {
-        setForm({ name: "", slug: "", plan: "FREE", active: true });
+        setForm(emptyCreateForm);
         setError("");
         setModal("create");
     };
@@ -86,6 +91,8 @@ export default function AdminTenants() {
             slug: tenant.slug,
             plan: tenant.plan,
             active: Boolean(tenant.active),
+            adminEmail: "",
+            adminPassword: "",
         });
         setError("");
         setModal("edit");
@@ -106,16 +113,20 @@ export default function AdminTenants() {
                     name: form.name.trim(),
                     slug: slugify(form.slug),
                     plan: form.plan,
+                    adminEmail: form.adminEmail.trim().toLowerCase(),
+                    adminPassword: form.adminPassword,
                 });
+
                 closeModal();
                 await load();
-                showAlert("success", "Tenant created successfully.");
+                showAlert("success", "Tenant and admin created successfully.");
             } else {
                 await updateTenant(selected.id, {
                     name: form.name.trim(),
                     plan: form.plan,
                     isActive: form.active,
                 });
+
                 closeModal();
                 await load();
                 showAlert("success", "Tenant updated successfully.");
@@ -124,6 +135,7 @@ export default function AdminTenants() {
             const message =
                 err.response?.data?.message ||
                 err.response?.data?.error ||
+                err.response?.data ||
                 "Something went wrong while saving.";
 
             setError(message);
@@ -148,6 +160,7 @@ export default function AdminTenants() {
             const message =
                 err.response?.data?.message ||
                 err.response?.data?.error ||
+                err.response?.data ||
                 "Failed to delete tenant.";
 
             setDeleteError(message);

@@ -1,10 +1,12 @@
-import axios from "axios";
+import http from "./http";
 
-const API = axios.create({
-  baseURL: "/api/admin",
-});
+export const getAllTenants = ()         => http.get("/api/super-admin/tenants");
+export const createTenant = (data)     => http.post("/api/super-admin/tenants", data);
+export const updateTenant = (id, data) => http.patch(`/api/super-admin/tenants/${id}`, data);
+export const deleteTenant = (id)       => http.delete(`/api/super-admin/tenants/${id}`);
 
-export const getAllTenants  = ()       => API.get("/tenants");
-export const createTenant  = (data)   => API.post("/tenants", data);
-export const updateTenant  = (id, data) => API.patch(`/tenants/${id}`, data);
-export const deleteTenant  = (id)     => API.delete(`/tenants/${id}`);
+export const startImpersonation = (tenantSlug, userId) =>
+  http.post(`/api/super-admin/impersonation/start/${tenantSlug}/${userId}`);
+
+export const stopImpersonation = () =>
+  http.post("/api/super-admin/impersonation/stop");

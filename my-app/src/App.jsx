@@ -1,23 +1,45 @@
-import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import AdminLogin   from "./pages/AdminLogin";
-import AdminTenants from "./pages/AdminTenants";
+import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./routes/ProtectedRoute";
+import Login from "./pages/Login";
+import TenantSignup from "./pages/TenantSignup";
+import AdminTenants from "./pages/AdminTenants";
+import TenantAdminDashboard from "./pages/TenantAdminDashboard";
+import TenantUserDashboard from "./pages/TenantUserDashboard";
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/admin/login" element={<AdminLogin />} />
-        <Route
-          path="/admin/tenants"
-          element={
-            <ProtectedRoute>
-              <AdminTenants />
-            </ProtectedRoute>
-          }
-        />
-        <Route path="*" element={<Navigate to="/admin/login" replace />} />
-      </Routes>
-    </BrowserRouter>
+    <Routes>
+      <Route path="/login" element={<Login />} />
+      <Route path="/signup/:tenantSlug" element={<TenantSignup />} />
+
+      <Route
+        path="/superadmin/tenants"
+        element={
+          <ProtectedRoute allowedRoles={["SUPER_ADMIN"]}>
+            <AdminTenants />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/t/:tenantSlug/admin"
+        element={
+          <ProtectedRoute allowedRoles={["ADMIN", "SUPER_ADMIN"]}>
+            <TenantAdminDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/t/:tenantSlug/app"
+        element={
+          <ProtectedRoute allowedRoles={["CUSTOMER", "ADMIN", "SUPER_ADMIN"]}>
+            <TenantUserDashboard />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route path="*" element={<Navigate to="/login" replace />} />
+    </Routes>
   );
 }
