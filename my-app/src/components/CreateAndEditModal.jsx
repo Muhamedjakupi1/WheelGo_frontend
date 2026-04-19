@@ -4,7 +4,10 @@ const slugify = (value = "") =>
     value
         .toLowerCase()
         .trim()
-        .replace(/[^a-z0-9\s-]/g, "");
+        .replace(/[^a-z0-9\s-]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-+|-+$/g, "");
 
 export default function CreateAndEditModal({
     open,
@@ -57,16 +60,18 @@ export default function CreateAndEditModal({
                     <input
                         style={{
                             ...s.input,
-                            ...(isEdit
-                                ? { ...s.not_allowed}
-                                : {}),
+                            ...(isEdit ? { ...s.not_allowed } : {}),
                         }}
                         value={form.slug}
                         disabled={isEdit}
                         onChange={handleSlugChange}
                         placeholder="Enter tenant slug"
                         required={!isEdit}
-                        title={isEdit ? "Slug cannot be changed." : "Slug will be formatted automatically."}
+                        title={
+                            isEdit
+                                ? "Slug cannot be changed."
+                                : "Slug will be formatted automatically."
+                        }
                     />
 
                     <label style={s.label}>Plan</label>
@@ -81,17 +86,52 @@ export default function CreateAndEditModal({
                         <option value="ENTERPRISE">ENTERPRISE</option>
                     </select>
 
-                    <label style={s.label}>Status</label>
-                    <select
-                        style={s.select}
-                        value={form.active ? "true" : "false"}
-                        onChange={(e) =>
-                            setForm({ ...form, active: e.target.value === "true" })
-                        }
-                    >
-                        <option value="true">Active</option>
-                        <option value="false">Inactive</option>
-                    </select>
+                    {!isEdit && (
+                        <>
+                            <label style={s.label}>Admin Email</label>
+                            <input
+                                style={s.input}
+                                type="email"
+                                value={form.adminEmail}
+                                onChange={(e) =>
+                                    setForm({ ...form, adminEmail: e.target.value })
+                                }
+                                placeholder="Enter tenant admin email"
+                                required
+                            />
+
+                            <label style={s.label}>Admin Password</label>
+                            <input
+                                style={s.input}
+                                type="password"
+                                value={form.adminPassword}
+                                onChange={(e) =>
+                                    setForm({ ...form, adminPassword: e.target.value })
+                                }
+                                placeholder="Enter tenant admin password"
+                                required
+                            />
+                        </>
+                    )}
+
+                    {isEdit && (
+                        <>
+                            <label style={s.label}>Status</label>
+                            <select
+                                style={s.select}
+                                value={form.active ? "true" : "false"}
+                                onChange={(e) =>
+                                    setForm({
+                                        ...form,
+                                        active: e.target.value === "true",
+                                    })
+                                }
+                            >
+                                <option value="true">Active</option>
+                                <option value="false">Inactive</option>
+                            </select>
+                        </>
+                    )}
 
                     {error && <p style={s.error}>{error}</p>}
 
