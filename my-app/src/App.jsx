@@ -33,7 +33,7 @@ export default function App() {
       <Route
         path="/t/:tenantSlug/app"
         element={
-          <ProtectedRoute allowedRoles={["CUSTOMER", "ADMIN", "SUPER_ADMIN"]}>
+          <ProtectedRoute allowedRoles={["USER", "ADMIN", "SUPER_ADMIN"]}>
             <TenantUserDashboard />
           </ProtectedRoute>
         }
