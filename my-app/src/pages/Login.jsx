@@ -1,13 +1,37 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+import {checkTenant} from "../api/authApi";
 
 export default function Login() {
+  const {tenantSlug} = useParams();
   const { signIn } = useAuth();
   const navigate = useNavigate();
+  const [tenant, setTenant] = useState(null);
+  const [notFound, setNotFound] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  useEffect (() => {
+    checkTenant(tenantSlug).then(r => setTenant(r.data)).catch(()=> setNotFound(true))
+  }, [tenantSlug]);
+
+  if (notFound) return (
+    <div style={s.page}>
+      <div style={s.card}>
+        <div style={s.logoBox}>WG</div>
+        <p style={{ color: "#f87171", textAlign: "center", marginTop: 20 }}>
+          Sorry, this company (tenant) was not found.
+        </p>
+        <Link to="/" style={{ color: "#2563eb", display: "block", textAlign: "center", marginTop: 10 }}>
+          Go back home
+        </Link>
+      </div>
+    </div>
+  );
+
+  if (!tenant) return <div style={s.page}><div style={{ color: "#888" }}>Loading...</div></div>;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -15,7 +39,7 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const data = await signIn(form.email, form.password);
+      const data = await signIn(tenantSlug, form.email, form.password);
 
       if (data.role === "SUPER_ADMIN") {
         navigate("/superadmin/tenants");

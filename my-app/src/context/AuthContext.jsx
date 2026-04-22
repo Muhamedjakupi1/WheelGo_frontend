@@ -7,8 +7,8 @@ const AuthContext = createContext(null);
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(getAuth());
 
-  const signIn = async (email, password) => {
-    const { data } = await login(email, password);
+  const signIn = async (tenantSlug, email, password) => {
+    const { data } = await login(tenantSlug, email, password);
     saveAuth(data);
     setUser(data);
     return data;

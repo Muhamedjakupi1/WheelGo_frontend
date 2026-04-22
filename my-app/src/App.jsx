@@ -9,7 +9,8 @@ import TenantUserDashboard from "./pages/TenantUserDashboard";
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<Login />} />
+      
+      <Route path="/login/:tenantSlug" element={<Login />} />
       <Route path="/signup/:tenantSlug" element={<TenantSignup />} />
 
       <Route
