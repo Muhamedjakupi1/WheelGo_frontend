@@ -14,6 +14,15 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
 
   useEffect (() => {
+    if(!tenantSlug){
+      const lastTenant = localStorage.getItem("last_tenant_slug");
+      if(lastTenant){
+        navigate(`/login/${lastTenant}`, {replace: true});
+      }else{
+        setNotFound(true);
+      }
+      return;
+    }
     checkTenant(tenantSlug).then(r => setTenant(r.data)).catch(()=> setNotFound(true))
   }, [tenantSlug]);
 
@@ -40,6 +49,8 @@ export default function Login() {
 
     try {
       const data = await signIn(tenantSlug, form.email, form.password);
+
+      localStorage.setItem("last_tenant_slug", tenantSlug);
 
       if (data.role === "SUPER_ADMIN") {
         navigate("/superadmin/tenants");

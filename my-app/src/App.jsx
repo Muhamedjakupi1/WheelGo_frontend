@@ -12,6 +12,7 @@ export default function App() {
       
       <Route path="/login/:tenantSlug" element={<Login />} />
       <Route path="/signup/:tenantSlug" element={<TenantSignup />} />
+      <Route path="/login" element={<Login/>}/>
 
       <Route
         path="/superadmin/tenants"
