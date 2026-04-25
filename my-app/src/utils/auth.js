@@ -7,5 +7,9 @@ export const getRole     = () => getAuth()?.role;
 export const getTenantSlug = () => getAuth()?.tenantSlug;
 export const getUserId   = () => getAuth()?.userId;
 export const isImpersonating = () => getAuth()?.isImpersonating === true;
-export const clearAuth   = () => localStorage.removeItem(KEY);
 export const isLoggedIn  = () => !!getToken();
+export const getTenantSlugBeforeLogout = () => {
+    const auth = getAuth();
+    return auth ? auth.tenantSlug : null
+};
+export const clearAuth   = () => localStorage.removeItem(KEY);

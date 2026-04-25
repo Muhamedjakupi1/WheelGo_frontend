@@ -9,6 +9,7 @@ export function AuthProvider({ children }) {
 
   const signIn = async (tenantSlug, email, password) => {
     const { data } = await login(tenantSlug, email, password);
+    localStorage.setItem("last_tenant_slug", tenantSlug)
     saveAuth(data);
     setUser(data);
     return data;
@@ -22,9 +23,14 @@ export function AuthProvider({ children }) {
   };
 
   const logout = () => {
+    const slug = user?.tenantSlug || getTenantSlug();
     clearAuth();
     setUser(null);
-    window.location.href = "/login";
+    if(slug){
+    window.location.href = `/login/${slug}`;
+    }else{
+      window.location.href = "/login";
+    }
   };
 
   const updateAuth = (data) => {
