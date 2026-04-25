@@ -1,9 +1,9 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-import { checkTenant } from "../api/authApi";
+import { useAuth } from "../../context/AuthContext";
+import { checkTenant } from "../../api/authApi";
 
-export default function TenantSignUp() {
+export default function SignUp() {
   const { tenantSlug } = useParams();
   const { signup } = useAuth();
   const navigate = useNavigate();
@@ -12,6 +12,9 @@ export default function TenantSignUp() {
   const [form, setForm]         = useState({ email: "", password: "", confirm: "" });
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
+  // REGEX
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
   useEffect(() => {
     checkTenant(tenantSlug).then(r => setTenant(r.data)).catch(() => setNotFound(true));
@@ -34,6 +37,18 @@ export default function TenantSignUp() {
     e.preventDefault();
     setError("");
     if (form.password !== form.confirm) { setError("Passwords do not match"); return; }
+    if (!emailRegex.test(form.email)) {
+      setError("Invalid email format");
+      return;
+    }
+    if (!passwordRegex.test(form.password)) {
+      setError("Password must be at least 8 chars, include 1 uppercase and 1 number");
+      return;
+    }
+    if (form.password !== form.confirm) {
+      setError("Passwords do not match");
+      return;
+    }
     setLoading(true);
     try {
       await signup(tenantSlug, form.email, form.password);
@@ -62,12 +77,12 @@ export default function TenantSignUp() {
           </div>
           <div style={s.field}>
             <label style={s.label}>Password</label>
-            <input style={s.input} type="password" placeholder="••••••••"
+            <input style={s.input} type="password" placeholder="••••••••" title="At least 8 characters, 1 uppercase letter and 1 number"
               value={form.password} onChange={e => setForm({ ...form, password: e.target.value })} required />
           </div>
           <div style={s.field}>
             <label style={s.label}>Confirm Password</label>
-            <input style={s.input} type="password" placeholder="••••••••"
+            <input style={s.input} type="password" placeholder="••••••••" title="At least 8 characters, 1 uppercase letter and 1 number"
               value={form.confirm} onChange={e => setForm({ ...form, confirm: e.target.value })} required />
           </div>
           {error && <div style={s.error}>{error}</div>}

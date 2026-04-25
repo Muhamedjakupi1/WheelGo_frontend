@@ -299,7 +299,7 @@ export default function AdminTenants() {
                 )}
 
                 {error && !modalOpen && (
-                    <p style={{ color: "#ef4444", marginTop: "12px", fontSize: "13px" }}>
+                    <p style={{ color: "#ffffff", marginTop: "12px", fontSize: "13px" }}>
                         {error}
                     </p>
                 )}
