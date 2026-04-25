@@ -18,15 +18,17 @@ export default function TenantSignUp() {
   }, [tenantSlug]);
 
   if (notFound) return (
-    <div style={s.page}><div style={s.card}>
-      <div style={s.logo}>🚗 WheelGo</div>
+    <div style={s.page}>
+      <div style={s.card}>
+       <div style={s.logoBox}>WG</div>
+      <div style={s.logo}>WheelGo</div>
       <p style={{ color:"#f87171", textAlign:"center", fontSize:16 }}>
         Sorry, this tenant does not exist.
       </p>
     </div></div>
   );
 
-  if (!tenant) return <div style={s.page}><div style={{ color:"#888" }}>Loading...</div></div>;
+  if (!tenant) return <div style={s.page}><div style={{ color:"#888" }}>Loading 123...</div></div>;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,9 +48,12 @@ export default function TenantSignUp() {
   return (
     <div style={s.page}>
       <div style={s.card}>
-        <div style={s.logo}>🚗 WheelGo</div>
+        <div style = {s.header}>
+         <div style={s.logoBox}>WG</div>
+        <div style={s.logo}>WheelGo</div>
+        </div>
         <h2 style={s.title}>{tenant.name}</h2>
-        <p style={s.sub}>Create your account</p>
+        <p style={s.sub}>Create Account</p>
         <form onSubmit={handleSubmit} style={s.form}>
           <div style={s.field}>
             <label style={s.label}>Email</label>
@@ -79,9 +84,23 @@ export default function TenantSignUp() {
 }
 
 const s = {
-  page:   { minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#0f0f0f" },
-  card:   { background:"#1a1a1a", border:"1px solid #2a2a2a", borderRadius:16, padding:"48px 40px", width:"100%", maxWidth:420 },
-  logo:   { fontSize:28, fontWeight:700, color:"#fff", marginBottom:24 },
+  page:   { minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#0a0a0f" },
+  card:   { background:"#0d0d14", border:"1px solid #2a2a2a", borderRadius:16, padding:"48px 40px", width:"100%", maxWidth:420 },
+  header: {display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", marginBottom: "32px" },
+  logo:   { fontSize:28, fontWeight:700, color:"#2563eb",  },
+  logoBox: {
+        width: "40px",
+        height: "40px",
+        borderRadius: "10px",
+        background: "linear-gradient(135deg, #0ea5e9, #2563eb)",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        fontWeight: "800",
+        fontSize: "14px",
+        color: "#fff",
+        boxShadow: "0 4px 12px rgba(37,99,235,0.3)",
+    },
   title:  { fontSize:24, fontWeight:700, color:"#fff", margin:"0 0 8px" },
   sub:    { fontSize:14, color:"#888", margin:"0 0 32px" },
   form:   { display:"flex", flexDirection:"column", gap:20 },
@@ -89,7 +108,7 @@ const s = {
   label:  { fontSize:13, fontWeight:500, color:"#ccc" },
   input:  { padding:"12px 16px", borderRadius:8, border:"1px solid #333", background:"#111", color:"#fff", fontSize:14, outline:"none" },
   error:  { background:"#2a1010", border:"1px solid #5a2020", color:"#f87171", padding:"10px 14px", borderRadius:8, fontSize:13 },
-  btn:    { padding:"13px", borderRadius:8, border:"none", background:"#e63946", color:"#fff", fontSize:15, fontWeight:600, cursor:"pointer" },
+  btn:    { padding:"13px", borderRadius:8, border:"none", background:"#2563eb", color:"#fff", fontSize:15, fontWeight:600, cursor:"pointer" },
   footer: { textAlign:"center", marginTop:24, fontSize:14, color:"#888" },
-  link:   { color:"#e63946", textDecoration:"none", fontWeight:500 },
+  link:   { color:"#2563eb", textDecoration:"none", fontWeight:500 },
 };

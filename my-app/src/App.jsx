@@ -1,7 +1,7 @@
 import { Routes, Route, Navigate } from "react-router-dom";
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Login from "./pages/Login";
-import TenantSignup from "./pages/TenantSignup";
+import TenantSignUp from "./pages/TenantSignUp";
 import AdminTenants from "./pages/AdminTenants";
 import TenantAdminDashboard from "./pages/TenantAdminDashboard";
 import TenantUserDashboard from "./pages/TenantUserDashboard";
@@ -11,7 +11,7 @@ export default function App() {
     <Routes>
       
       <Route path="/login/:tenantSlug" element={<Login />} />
-      <Route path="/signup/:tenantSlug" element={<TenantSignup />} />
+      <Route path="/signup/:tenantSlug" element={<TenantSignUp />} />
       <Route path="/login" element={<Login/>}/>
 
       <Route
