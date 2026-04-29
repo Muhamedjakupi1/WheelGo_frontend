@@ -10,6 +10,8 @@ import UserLayout from "./pages/user/UserLayout";
 import TenantUserDashboard from "./pages/user/TenantUserDashboard";
 import TenantUserBooking from "./pages/user/TenantUserBooking";
 import TenantUserSettings from "./pages/user/TenantUserSettings";
+import TenantUserProfile from "./pages/user/TenantUserPorfile";
+import TenantUserSupport from "./pages/user/TenantUserSupport";
 
 export default function App() {
   return (
@@ -47,6 +49,8 @@ export default function App() {
         <Route path="app" element={<TenantUserDashboard />} />
         <Route path="bookings" element={<TenantUserBooking />} />
         <Route path="settings" element={<TenantUserSettings />} />
+        <Route path="profile" element={<TenantUserProfile />} />
+        <Route path="support" element={<TenantUserSupport />} />
         <Route index element={<Navigate to="app" replace />} />
       </Route>
 

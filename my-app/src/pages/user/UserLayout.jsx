@@ -26,6 +26,8 @@ export default function UserLayout() {
           <NavItem to={`/t/${tenantSlug}/app`} icon={<LayoutGrid size={20} />} label="Dashboard" />
            <NavItem to={`/t/${tenantSlug}/bookings`} icon={<Clock size={20} />} label="My Booking" /> 
           <NavItem to={`/t/${tenantSlug}/settings`} icon={<Settings size={20} />} label="Settings" /> 
+          <NavItem to={`/t/${tenantSlug}/profile`} icon={<User size={20} />} label="Profile" /> 
+          <NavItem to={`/t/${tenantSlug}/support`} icon={<Headphones size={20} />} label="Support" /> 
         </nav>
 
         <button onClick={handleLogout} style={s.logoutBtn}>
