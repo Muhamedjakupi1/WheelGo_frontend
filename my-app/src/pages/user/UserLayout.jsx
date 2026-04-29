@@ -17,7 +17,6 @@ export default function UserLayout() {
 
   return (
     <div style={{ display: "flex", minHeight: "100vh", background: "#080a0f" }}>
-
       <aside style={s.sidebar}>
         <div style={s.logoSection}>
           <h2 style={s.logoText}>CarRent</h2>
@@ -25,6 +24,8 @@ export default function UserLayout() {
 
         <nav style={s.nav}>
           <NavItem to={`/t/${tenantSlug}/app`} icon={<LayoutGrid size={20} />} label="Dashboard" />
+           <NavItem to={`/t/${tenantSlug}/bookings`} icon={<Clock size={20} />} label="My Booking" /> 
+          <NavItem to={`/t/${tenantSlug}/settings`} icon={<Settings size={20} />} label="Settings" /> 
         </nav>
 
         <button onClick={handleLogout} style={s.logoutBtn}>
@@ -33,7 +34,7 @@ export default function UserLayout() {
         </button>
       </aside>
 
-      {/* PJESA E PËRMBAJTJES (Djathtas) */}
+
       <main style={s.mainWrapper}>
         <Outlet />
       </main>
@@ -66,7 +67,7 @@ const s = {
     background: "#0b121e",
     padding: "40px 20px",
     borderRight: "1px solid #1e293b",
-    display: "flex",
+    display: "flex",	
     flexDirection: "column",
     position: "fixed",
     height: "100vh",
@@ -77,7 +78,7 @@ const s = {
   nav: { display: "flex", flexDirection: "column", gap: "8px", flex: 1 },
   mainWrapper: {
     flex: 1,
-    marginLeft: "260px",
+    marginLeft: "260px", 
     padding: "40px",
     width: "calc(100% - 260px)",
   },
