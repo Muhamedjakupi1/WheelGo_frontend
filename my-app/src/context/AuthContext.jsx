@@ -1,5 +1,5 @@
 import { createContext, useContext, useState } from "react";
-import { saveAuth, getAuth, clearAuth } from "../utils/auth";
+import { saveAuth, getAuth, clearAuth, getTenantSlug } from "../utils/auth";
 import { login, signupTenant } from "../api/authApi";
 
 const AuthContext = createContext(null);
