@@ -2,8 +2,8 @@ import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
-import Login from "./pages/Login";
-import TenantSignup from "./pages/TenantSignup";
+import Login from "./pages/auth/Login";
+import SignUp from "./pages/auth/SignUp";
 import AdminTenants from "./pages/AdminTenants";
 import TenantAdminDashboard from "./pages/TenantAdminDashboard";
 import UserLayout from "./pages/user/UserLayout";
@@ -18,7 +18,8 @@ export default function App() {
     <Routes>
       <Route path="/login" element={<Login />} />
       <Route path="/login/:tenantSlug" element={<Login />} />
-      <Route path="/signup/:tenantSlug" element={<TenantSignup />} />
+      <Route path="/signup/:tenantSlug" element={<SignUp />} />
+      <Route path="/login" element={<Login/>}/>
 
       <Route
         path="/superadmin/tenants"
