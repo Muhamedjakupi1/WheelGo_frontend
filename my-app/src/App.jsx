@@ -1,17 +1,22 @@
-import React from "react";
+﻿import React from "react";
 import { Routes, Route, Navigate } from "react-router-dom";
 
 import ProtectedRoute from "./routes/ProtectedRoute";
 import Login from "./pages/auth/Login";
 import SignUp from "./pages/auth/SignUp";
 import AdminTenants from "./pages/AdminTenants";
-import TenantAdminDashboard from "./pages/TenantAdminDashboard";
 import UserLayout from "./pages/user/UserLayout";
 import TenantUserDashboard from "./pages/user/TenantUserDashboard";
 import TenantUserBooking from "./pages/user/TenantUserBooking";
 import TenantUserSettings from "./pages/user/TenantUserSettings";
 import TenantUserProfile from "./pages/user/TenantUserPorfile";
 import TenantUserSupport from "./pages/user/TenantUserSupport";
+import AdminLayout from "./pages/admin/AdminLayout";
+import TenantAdminDashboard from "./pages/admin/TenantAdminDashboard";
+import TenantAdminVehicles from "./pages/admin/TenantAdminVehicles";
+import TenantAdminVehicleCategories from "./pages/admin/TenantAdminVehicleCategories";
+import TenantAdminVehicleImages from "./pages/admin/TenantAdminVehicleImages";
+import TenantAdminUsers from "./pages/admin/TenantAdminUsers";
 
 export default function App() {
   return (
@@ -19,7 +24,6 @@ export default function App() {
       <Route path="/login" element={<Login />} />
       <Route path="/login/:tenantSlug" element={<Login />} />
       <Route path="/signup/:tenantSlug" element={<SignUp />} />
-      <Route path="/login" element={<Login/>}/>
 
       <Route
         path="/superadmin/tenants"
@@ -34,10 +38,16 @@ export default function App() {
         path="/t/:tenantSlug/admin"
         element={
           <ProtectedRoute allowedRoles={["ADMIN", "SUPER_ADMIN"]}>
-            <TenantAdminDashboard />
+            <AdminLayout />
           </ProtectedRoute>
         }
-      />
+      >
+        <Route index element={<TenantAdminDashboard />} />
+        <Route path="vehicles" element={<TenantAdminVehicles />} />
+        <Route path="vehicle-categories" element={<TenantAdminVehicleCategories />} />
+        <Route path="vehicle-images" element={<TenantAdminVehicleImages />} />
+        <Route path="users" element={<TenantAdminUsers />} />
+      </Route>
 
       <Route
         path="/t/:tenantSlug"
@@ -59,3 +69,4 @@ export default function App() {
     </Routes>
   );
 }
+
