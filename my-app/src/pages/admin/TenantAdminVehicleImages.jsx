@@ -1,6 +1,5 @@
 ﻿import { useEffect, useMemo, useState } from "react";
 import {
-  createAdminVehicleImage,
   deleteAdminVehicleImage,
   getAdminVehicleImages,
   getAdminVehicles,
@@ -8,9 +7,17 @@ import {
   updateAdminVehicleImage,
 } from "../../api/adminApi";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
+import AdminConfirmModal from "./AdminConfirmModal";
 import { resolveMediaUrl } from "../../utils/media";
 
-const defaultForm = { vehicleId: "", url: "", isPrimary: false };
+const defaultForm = { vehicleId: "", isPrimary: false };
+
+function fileNameFromStoredPath(path) {
+  if (!path || typeof path !== "string") return "—";
+  const parts = path.split("/").filter(Boolean);
+  const segment = parts.length ? parts[parts.length - 1] : path;
+  return segment.length > 42 ? `${segment.slice(0, 20)}…${segment.slice(-12)}` : segment;
+}
 
 export default function TenantAdminVehicleImages() {
   const [images, setImages] = useState([]);
@@ -22,6 +29,9 @@ export default function TenantAdminVehicleImages() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [selectedFile, setSelectedFile] = useState(null);
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
 
@@ -55,7 +65,6 @@ export default function TenantAdminVehicleImages() {
     setSelectedId(image.id);
     setFormData({
       vehicleId: image.vehicleId || "",
-      url: image.url || "",
       isPrimary: image.primary ?? image.isPrimary ?? false,
     });
     setSuccess("");
@@ -71,19 +80,30 @@ export default function TenantAdminVehicleImages() {
       setSuccess("");
 
       if (isEditing) {
-        await updateAdminVehicleImage(selectedId, { url: formData.url, isPrimary: formData.isPrimary });
+        const patch = new FormData();
+        patch.append("isPrimary", String(formData.isPrimary));
+        if (selectedFile) {
+          patch.append("file", selectedFile);
+        }
+        await updateAdminVehicleImage(selectedId, patch);
         setSuccess("Vehicle image updated successfully.");
       } else {
-        if (selectedFile) {
-          const multipart = new FormData();
-          multipart.append("vehicleId", formData.vehicleId);
-          multipart.append("file", selectedFile);
-          multipart.append("isPrimary", String(formData.isPrimary));
-          await uploadAdminVehicleImage(multipart);
-        } else {
-          await createAdminVehicleImage({ vehicleId: formData.vehicleId, url: formData.url, primary: formData.isPrimary });
+        if (!selectedFile) {
+          setError("Please upload a photo from your computer.");
+          setSaving(false);
+          return;
         }
-        setSuccess("Vehicle image created successfully.");
+        if (!formData.vehicleId) {
+          setError("Select which vehicle this photo belongs to.");
+          setSaving(false);
+          return;
+        }
+        const multipart = new FormData();
+        multipart.append("vehicleId", formData.vehicleId);
+        multipart.append("file", selectedFile);
+        multipart.append("isPrimary", String(formData.isPrimary));
+        await uploadAdminVehicleImage(multipart);
+        setSuccess("Vehicle image uploaded successfully.");
       }
 
       await loadData();
@@ -95,22 +115,48 @@ export default function TenantAdminVehicleImages() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this image?")) return;
+  const openDeleteModal = (image) => {
+    setConfirmError("");
+    setConfirmDelete({
+      id: image.id,
+      label: image.vehicleLabel || "Vehicle image",
+    });
+  };
+
+  const closeDeleteModal = () => {
+    if (confirmLoading) return;
+    setConfirmDelete(null);
+    setConfirmError("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete?.id) return;
     try {
-      await deleteAdminVehicleImage(id);
-      if (selectedId === id) resetForm();
+      setConfirmLoading(true);
+      setConfirmError("");
+      await deleteAdminVehicleImage(confirmDelete.id);
+      if (selectedId === confirmDelete.id) resetForm();
+      setConfirmDelete(null);
       await loadData();
+      setSuccess("Image deleted.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete vehicle image.");
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        "Failed to delete vehicle image.";
+      setConfirmError(msg);
+    } finally {
+      setConfirmLoading(false);
     }
   };
+
+  const createDisabled = saving || vehicles.length === 0 || !selectedFile || !formData.vehicleId;
 
   return (
     <div style={layout.contentStack}>
       <section style={card.panel}>
         <h1 style={{ margin: 0, fontSize: "1.9rem", color: palette.text }}>Vehicle Images</h1>
-        <p style={card.subtitle}>Attach media to vehicles and mark one image as primary when needed.</p>
+        <p style={card.subtitle}>Upload photos from your computer. Only the stored file path is saved in the database.</p>
       </section>
 
       <section style={grid.two}>
@@ -133,7 +179,7 @@ export default function TenantAdminVehicleImages() {
                 <thead>
                   <tr>
                     <th style={table.headCell}>Vehicle</th>
-                    <th style={table.headCell}>Image URL</th>
+                    <th style={table.headCell}>Photo</th>
                     <th style={table.headCell}>Primary</th>
                     <th style={table.headCell}>Actions</th>
                   </tr>
@@ -141,24 +187,39 @@ export default function TenantAdminVehicleImages() {
                 <tbody>
                   {images.map((image) => (
                     <tr key={image.id}>
-                      <td style={table.cell}>{image.vehicleLabel || "-"}</td>
+                      <td style={{ ...table.cell, verticalAlign: "middle" }}>{image.vehicleLabel || "-"}</td>
                       <td style={table.cell}>
-                        <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
                           <img
                             src={resolveMediaUrl(image.url)}
                             alt={image.vehicleLabel || "Vehicle"}
-                            style={{ width: "56px", height: "40px", objectFit: "cover", borderRadius: "10px", border: `1px solid ${palette.border}` }}
+                            style={{
+                              width: "72px",
+                              height: "48px",
+                              objectFit: "cover",
+                              borderRadius: "10px",
+                              border: `1px solid ${palette.border}`,
+                              flexShrink: 0,
+                            }}
                           />
-                          <a href={resolveMediaUrl(image.url)} target="_blank" rel="noreferrer" style={{ color: palette.primary }}>
-                            {image.url}
-                          </a>
+                          <span style={{ color: palette.muted, fontSize: "0.82rem", wordBreak: "break-all" }}>
+                            {fileNameFromStoredPath(image.url)}
+                          </span>
                         </div>
                       </td>
-                      <td style={table.cell}><span style={badge((image.primary ?? image.isPrimary) ? "success" : "default")}>{(image.primary ?? image.isPrimary) ? "Primary" : "Secondary"}</span></td>
-                      <td style={table.cell}>
+                      <td style={{ ...table.cell, verticalAlign: "middle" }}>
+                        <span style={badge((image.primary ?? image.isPrimary) ? "success" : "default")}>
+                          {(image.primary ?? image.isPrimary) ? "Primary" : "Secondary"}
+                        </span>
+                      </td>
+                      <td style={{ ...table.cell, verticalAlign: "middle" }}>
                         <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                          <button style={button.ghost} onClick={() => handleEdit(image)}>Edit</button>
-                          <button style={button.danger} onClick={() => handleDelete(image.id)}>Delete</button>
+                          <button type="button" style={button.ghost} onClick={() => handleEdit(image)}>
+                            Edit
+                          </button>
+                          <button type="button" style={button.danger} onClick={() => openDeleteModal(image)}>
+                            Delete
+                          </button>
                         </div>
                       </td>
                     </tr>
@@ -170,8 +231,12 @@ export default function TenantAdminVehicleImages() {
         </article>
 
         <article style={card.panel}>
-          <h2 style={card.title}>{isEditing ? "Edit Vehicle Image" : "Create Vehicle Image"}</h2>
-          <p style={card.subtitle}>Choose the linked vehicle and either upload an image from your computer or save a direct image URL.</p>
+          <h2 style={card.title}>{isEditing ? "Edit vehicle photo" : "Upload vehicle photo"}</h2>
+          <p style={card.subtitle}>
+            {isEditing
+              ? "Optionally replace the file from your machine, or only change whether this is the primary photo."
+              : "Choose the vehicle and a single image file. The server saves the file and stores its path."}
+          </p>
 
           {error && <div style={{ ...badge("danger"), marginTop: "16px", justifyContent: "center" }}>{error}</div>}
           {success && <div style={{ ...badge("success"), marginTop: "16px", justifyContent: "center" }}>{success}</div>}
@@ -180,58 +245,79 @@ export default function TenantAdminVehicleImages() {
             {!isEditing && (
               <div style={form.field}>
                 <label style={form.label}>Vehicle</label>
-                <select style={form.input} value={formData.vehicleId} onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })} required>
+                <select
+                  style={form.input}
+                  value={formData.vehicleId}
+                  onChange={(e) => setFormData({ ...formData, vehicleId: e.target.value })}
+                  required
+                >
                   <option value="">Select vehicle</option>
                   {vehicles.map((vehicle) => (
-                    <option key={vehicle.id} value={vehicle.id}>{vehicle.make} {vehicle.model} ({vehicle.plateNumber})</option>
+                    <option key={vehicle.id} value={vehicle.id}>
+                      {vehicle.make} {vehicle.model} ({vehicle.plateNumber})
+                    </option>
                   ))}
                 </select>
               </div>
             )}
 
             <div style={form.field}>
-              <label style={form.label}>Image URL</label>
+              <label style={form.label}>{isEditing ? "Replace photo (optional)" : "Upload photo"}</label>
               <input
                 style={form.input}
-                value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                required={!selectedFile}
-                disabled={!isEditing && Boolean(selectedFile)}
-                placeholder={selectedFile ? "Using uploaded file" : "https://example.com/car.png"}
+                type="file"
+                accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
               />
+              {!isEditing && (
+                <p style={{ margin: "8px 0 0", color: palette.muted, fontSize: "0.85rem", lineHeight: 1.45 }}>
+                  Required for a new image. JPG, PNG, WebP or GIF.
+                </p>
+              )}
+              {isEditing && (
+                <p style={{ margin: "8px 0 0", color: palette.muted, fontSize: "0.85rem", lineHeight: 1.45 }}>
+                  Leave empty to keep the current file; submit to update primary only.
+                </p>
+              )}
             </div>
 
-            {!isEditing && (
-              <div style={form.field}>
-                <label style={form.label}>Browse Image From Computer</label>
-                <input
-                  style={form.input}
-                  type="file"
-                  accept="image/png,image/jpeg,image/jpg,image/webp,image/gif"
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
-                />
-              </div>
-            )}
-
-            {!isEditing && selectedFile && (
-              <div style={{ ...badge("default"), justifyContent: "center" }}>
-                Selected file: {selectedFile.name}
-              </div>
+            {selectedFile && (
+              <div style={{ ...badge("default"), justifyContent: "center" }}>Selected: {selectedFile.name}</div>
             )}
 
             <label style={{ ...form.label, display: "flex", alignItems: "center", gap: "10px", color: palette.text }}>
-              <input type="checkbox" checked={formData.isPrimary} onChange={(e) => setFormData({ ...formData, isPrimary: e.target.checked })} />
+              <input
+                type="checkbox"
+                checked={formData.isPrimary}
+                onChange={(e) => setFormData({ ...formData, isPrimary: e.target.checked })}
+              />
               Mark as primary image
             </label>
 
             <div style={form.actions}>
-              <button type="submit" style={button.primary} disabled={saving || (!isEditing && vehicles.length === 0)}>{saving ? "Saving..." : isEditing ? "Update Image" : "Create Image"}</button>
-              <button type="button" style={button.secondary} onClick={resetForm}>Reset</button>
+              <button type="submit" style={button.primary} disabled={isEditing ? saving : createDisabled}>
+                {saving ? "Saving..." : isEditing ? "Update" : "Upload photo"}
+              </button>
+              <button type="button" style={button.secondary} onClick={resetForm}>
+                Reset
+              </button>
             </div>
           </form>
         </article>
       </section>
+
+      <AdminConfirmModal
+        open={Boolean(confirmDelete)}
+        title="Delete vehicle image?"
+        description={
+          confirmDelete ? `Remove this image for ${confirmDelete.label}. This cannot be undone.` : ""
+        }
+        error={confirmError}
+        loading={confirmLoading}
+        confirmLabel="Delete image"
+        onCancel={closeDeleteModal}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }
-

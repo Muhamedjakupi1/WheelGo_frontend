@@ -5,6 +5,7 @@ import {
   getAdminVehicleCategories,
   updateAdminVehicleCategory,
 } from "../../api/adminApi";
+import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
 
 const defaultForm = { name: "", description: "" };
@@ -17,6 +18,9 @@ export default function TenantAdminVehicleCategories() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
 
@@ -78,17 +82,36 @@ export default function TenantAdminVehicleCategories() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this category?")) return;
+  const openDeleteModal = (category) => {
+    setConfirmError("");
+    setConfirmDelete({ id: category.id, name: category.name });
+  };
 
+  const closeDeleteModal = () => {
+    if (confirmLoading) return;
+    setConfirmDelete(null);
+    setConfirmError("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete?.id) return;
     try {
-      await deleteAdminVehicleCategory(id);
-
-      if (selectedId === id) resetForm();
-
+      setConfirmLoading(true);
+      setConfirmError("");
+      await deleteAdminVehicleCategory(confirmDelete.id);
+      if (selectedId === confirmDelete.id) resetForm();
+      setConfirmDelete(null);
       await loadData();
+      setSuccess("Category deleted.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete category.");
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        (typeof err.response?.data === "string" ? err.response.data : null) ||
+        "Failed to delete category.";
+      setConfirmError(msg);
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -160,6 +183,7 @@ export default function TenantAdminVehicleCategories() {
                           }}
                         >
                           <button
+                            type="button"
                             style={button.ghost}
                             onClick={() => handleEdit(category)}
                           >
@@ -167,8 +191,9 @@ export default function TenantAdminVehicleCategories() {
                           </button>
 
                           <button
+                            type="button"
                             style={button.danger}
-                            onClick={() => handleDelete(category.id)}
+                            onClick={() => openDeleteModal(category)}
                           >
                             Delete
                           </button>
@@ -274,6 +299,21 @@ export default function TenantAdminVehicleCategories() {
           </form>
         </article>
       </section>
+
+      <AdminConfirmModal
+        open={Boolean(confirmDelete)}
+        title="Delete vehicle category?"
+        description={
+          confirmDelete
+            ? `"${confirmDelete.name}" will be removed from the catalog. You cannot delete a category while vehicles are still assigned to it.`
+            : ""
+        }
+        error={confirmError}
+        loading={confirmLoading}
+        confirmLabel="Delete category"
+        onCancel={closeDeleteModal}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

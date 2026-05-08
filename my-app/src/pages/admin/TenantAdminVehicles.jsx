@@ -6,6 +6,8 @@ import {
   getAdminVehicles,
   updateAdminVehicle,
 } from "../../api/adminApi";
+import { resolveMediaUrl } from "../../utils/media";
+import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
 
 const defaultForm = {
@@ -13,6 +15,7 @@ const defaultForm = {
   plateNumber: "",
   make: "",
   model: "",
+  location: "",
   year: "",
   color: "",
   vin: "",
@@ -28,6 +31,21 @@ const fuelOptions = ["PETROL", "DIESEL", "ELECTRIC", "HYBRID"];
 const transmissionOptions = ["MANUAL", "AUTOMATIC"];
 const statusOptions = ["AVAILABLE", "RENTED", "MAINTENANCE", "INACTIVE"];
 
+const vehicleThumbPlaceholder = {
+  flexShrink: 0,
+  width: 76,
+  height: 52,
+  borderRadius: "12px",
+  border: `1px solid ${palette.border}`,
+  background: "#09101c",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  fontSize: "0.72rem",
+  fontWeight: 600,
+  color: palette.muted,
+};
+
 export default function TenantAdminVehicles() {
   const [vehicles, setVehicles] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -37,6 +55,9 @@ export default function TenantAdminVehicles() {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [confirmDelete, setConfirmDelete] = useState(null);
+  const [confirmLoading, setConfirmLoading] = useState(false);
+  const [confirmError, setConfirmError] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
 
@@ -75,6 +96,7 @@ export default function TenantAdminVehicles() {
       year: vehicle.year || "",
       color: vehicle.color || "",
       vin: vehicle.vin || "",
+      location: vehicle.location || "",
       fuelType: vehicle.fuelType || "PETROL",
       transmission: vehicle.transmission || "MANUAL",
       seats: vehicle.seats || "5",
@@ -94,6 +116,7 @@ export default function TenantAdminVehicles() {
     year: Number(formData.year),
     color: formData.color || null,
     vin: formData.vin || null,
+    location: formData.location || null,
     fuelType: formData.fuelType,
     transmission: formData.transmission,
     seats: Number(formData.seats),
@@ -127,14 +150,38 @@ export default function TenantAdminVehicles() {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm("Delete this vehicle?")) return;
+  const openDeleteModal = (vehicle) => {
+    setConfirmError("");
+    setConfirmDelete({
+      id: vehicle.id,
+      label: `${vehicle.make} ${vehicle.model} (${vehicle.plateNumber})`,
+    });
+  };
+
+  const closeDeleteModal = () => {
+    if (confirmLoading) return;
+    setConfirmDelete(null);
+    setConfirmError("");
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!confirmDelete?.id) return;
     try {
-      await deleteAdminVehicle(id);
-      if (selectedId === id) resetForm();
+      setConfirmLoading(true);
+      setConfirmError("");
+      await deleteAdminVehicle(confirmDelete.id);
+      if (selectedId === confirmDelete.id) resetForm();
+      setConfirmDelete(null);
       await loadData();
+      setSuccess("Vehicle deleted.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to delete vehicle.");
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        "Failed to delete vehicle.";
+      setConfirmError(msg);
+    } finally {
+      setConfirmLoading(false);
     }
   };
 
@@ -164,7 +211,7 @@ export default function TenantAdminVehicles() {
               <table style={table.table}>
                 <thead>
                   <tr>
-                    <th style={table.headCell}>Vehicle</th>
+                    <th style={{ ...table.headCell, paddingLeft: "14px" }}>Vehicle</th>
                     <th style={table.headCell}>Category</th>
                     <th style={table.headCell}>Rate</th>
                     <th style={table.headCell}>Status</th>
@@ -172,23 +219,59 @@ export default function TenantAdminVehicles() {
                   </tr>
                 </thead>
                 <tbody>
-                  {vehicles.map((vehicle) => (
-                    <tr key={vehicle.id}>
-                      <td style={table.cell}>
-                        <div style={{ fontWeight: 700 }}>{vehicle.make} {vehicle.model}</div>
-                        <div style={{ color: palette.muted, fontSize: "0.88rem", marginTop: "4px" }}>{vehicle.plateNumber} • {vehicle.year}</div>
-                      </td>
-                      <td style={table.cell}>{vehicle.categoryName || "-"}</td>
-                      <td style={table.cell}>€{vehicle.dailyRate}</td>
-                      <td style={table.cell}><span style={badge(vehicle.status === "AVAILABLE" ? "success" : vehicle.status === "RENTED" ? "warning" : "danger")}>{vehicle.status}</span></td>
-                      <td style={table.cell}>
-                        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
-                          <button style={button.ghost} onClick={() => handleEdit(vehicle)}>Edit</button>
-                          <button style={button.danger} onClick={() => handleDelete(vehicle.id)}>Delete</button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
+                  {vehicles.map((vehicle) => {
+                    const thumbSrc = resolveMediaUrl(vehicle.primaryImageUrl);
+                    const imgAlt = `${vehicle.make} ${vehicle.model}`.trim() || "Vehicle";
+                    return (
+                      <tr key={vehicle.id}>
+                        <td style={{ ...table.cell, verticalAlign: "middle", paddingLeft: "14px" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: "14px", minHeight: "52px" }}>
+                            {thumbSrc ? (
+                              <img
+                                src={thumbSrc}
+                                alt={imgAlt}
+                                loading="lazy"
+                                style={{
+                                  flexShrink: 0,
+                                  width: 76,
+                                  height: 52,
+                                  objectFit: "cover",
+                                  borderRadius: "12px",
+                                  border: `1px solid ${palette.border}`,
+                                  background: "#09101c",
+                                }}
+                              />
+                            ) : (
+                              <div style={vehicleThumbPlaceholder} aria-hidden>
+                                No photo
+                              </div>
+                            )}
+                            <div style={{ minWidth: 0 }}>
+                              <div style={{ fontWeight: 700 }}>{vehicle.make} {vehicle.model}</div>
+                              <div style={{ color: palette.muted, fontSize: "0.88rem", marginTop: "4px" }}>
+                                {vehicle.plateNumber} • {vehicle.year}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        <td style={table.cell}>{vehicle.categoryName || "-"}</td>
+                        <td style={table.cell}>€{vehicle.dailyRate}</td>
+                        <td style={{ ...table.cell, verticalAlign: "middle" }}>
+                          <span style={badge(vehicle.status === "AVAILABLE" ? "success" : vehicle.status === "RENTED" ? "warning" : "danger")}>{vehicle.status}</span>
+                        </td>
+                        <td style={{ ...table.cell, verticalAlign: "middle" }}>
+                          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            <button type="button" style={button.ghost} onClick={() => handleEdit(vehicle)}>
+                              Edit
+                            </button>
+                            <button type="button" style={button.danger} onClick={() => openDeleteModal(vehicle)}>
+                              Delete
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -211,6 +294,21 @@ export default function TenantAdminVehicles() {
                   <option key={category.id} value={category.id}>{category.name}</option>
                 ))}
               </select>
+            </div>
+            <div style={form.field}>
+              <label style={form.label}>Location</label>
+
+              <input
+                style={form.input}
+                value={formData.locationId}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    locationId: e.target.value,
+                  })
+                }
+                placeholder="Enter location"
+              />
             </div>
 
             <div style={form.row}>
@@ -292,6 +390,21 @@ export default function TenantAdminVehicles() {
           </form>
         </article>
       </section>
+
+      <AdminConfirmModal
+        open={Boolean(confirmDelete)}
+        title="Delete this vehicle?"
+        description={
+          confirmDelete
+            ? `${confirmDelete.label} will be permanently removed from the inventory, along with dependent records enforced by the server.`
+            : ""
+        }
+        error={confirmError}
+        loading={confirmLoading}
+        confirmLabel="Delete vehicle"
+        onCancel={closeDeleteModal}
+        onConfirm={handleConfirmDelete}
+      />
     </div>
   );
 }

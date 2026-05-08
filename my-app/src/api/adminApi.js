@@ -12,12 +12,12 @@ export const deleteAdminVehicleCategory = (id) => http.delete(`/api/v1/admin/veh
 
 export const getAdminVehicleImages = (vehicleId) =>
   http.get("/api/v1/admin/vehicle-images", { params: vehicleId ? { vehicleId } : {} });
-export const createAdminVehicleImage = (data) => http.post("/api/v1/admin/vehicle-images", data);
+/** Multipart FormData with vehicleId, file, optional isPrimary (string "true"|"false") */
 export const uploadAdminVehicleImage = (formData) =>
-  http.post("/api/v1/admin/vehicle-images/upload", formData, {
-    headers: { "Content-Type": "multipart/form-data" },
-  });
-export const updateAdminVehicleImage = (id, data) => http.patch(`/api/v1/admin/vehicle-images/${id}`, data);
+  http.post("/api/v1/admin/vehicle-images/upload", formData);
+/** Multipart FormData — optional file, optional isPrimary (append at least one) */
+export const updateAdminVehicleImage = (id, formData) =>
+  http.patch(`/api/v1/admin/vehicle-images/${id}`, formData);
 export const deleteAdminVehicleImage = (id) => http.delete(`/api/v1/admin/vehicle-images/${id}`);
 
 export const getAdminUsers = () => http.get("/api/v1/admin/users");
