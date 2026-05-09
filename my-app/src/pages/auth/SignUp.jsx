@@ -3,22 +3,54 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { checkTenant } from "../../api/authApi";
 
+const RESERVED_SIGNUP_TENANTS = new Set(["super-admin-tenant"]);
+
 export default function SignUp() {
   const { tenantSlug } = useParams();
   const { signup } = useAuth();
   const navigate = useNavigate();
-  const [tenant, setTenant]     = useState(null);
+  const [tenant, setTenant] = useState(null);
   const [notFound, setNotFound] = useState(false);
-  const [form, setForm]         = useState({ email: "", password: "", confirm: "" });
-  const [error, setError]       = useState("");
-  const [loading, setLoading]   = useState(false);
-  // REGEX
+  const [unauthorized, setUnauthorized] = useState(false);
+  const [form, setForm] = useState({ email: "", password: "", confirm: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
   useEffect(() => {
-    checkTenant(tenantSlug).then(r => setTenant(r.data)).catch(() => setNotFound(true));
+    if (tenantSlug && RESERVED_SIGNUP_TENANTS.has(tenantSlug.toLowerCase())) {
+      setUnauthorized(true);
+      setTenant(null);
+      setNotFound(false);
+      return;
+    }
+
+    setUnauthorized(false);
+    checkTenant(tenantSlug)
+      .then((r) => setTenant(r.data))
+      .catch(() => setNotFound(true));
   }, [tenantSlug]);
+
+  if (unauthorized) {
+    return (
+      <div style={s.page}>
+        <div style={s.card}>
+          <div style={s.logoBox}>WG</div>
+          <div style={s.logo}>WheelGo</div>
+          <p style={{ color: "#f87171", textAlign: "center", fontSize: 16, marginTop: 20 }}>
+            Unauthorized
+          </p>
+          <p style={{ color: "#888", textAlign: "center", fontSize: 14, marginTop: 10 }}>
+            Signup is disabled for this tenant.
+          </p>
+          <p style={s.footer}>
+            <Link to={`/login/${tenantSlug}`} style={s.link}>Sign in</Link>
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   if (notFound) return (
     <div style={s.page}>
@@ -54,7 +86,7 @@ export default function SignUp() {
       await signup(tenantSlug, form.email, form.password);
       navigate(`/t/${tenantSlug}/app`);
     } catch (err) {
-      setError(err.response?.data || "Signup failed");
+      setError(err.response?.data?.message || err.response?.data || "Signup failed");
     } finally {
       setLoading(false);
     }

@@ -3,6 +3,8 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { checkTenant } from "../../api/authApi";
 
+const RESERVED_SIGNUP_TENANTS = new Set(["super-admin-tenant"]);
+
 export default function Login() {
   const { tenantSlug } = useParams();
   const { signIn } = useAuth();
@@ -12,8 +14,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  // REGEX
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  const emailRegex = /^[^\\s@]+@[^\\s@]+\.[^\\s@]+$/;
 
   useEffect(() => {
     if (!tenantSlug) {
@@ -71,6 +72,8 @@ export default function Login() {
     }
   };
 
+  const showSignupLink = tenantSlug && !RESERVED_SIGNUP_TENANTS.has(tenantSlug.toLowerCase());
+
   return (
     <div style={s.page}>
       <div style={s.card}>
@@ -112,12 +115,14 @@ export default function Login() {
             {loading ? "Signing in..." : "Sign in"}
           </button>
         </form>
-        <p style={s.footer}>
-          Don't have an account?{" "}
-          <Link to={`/signup/${tenantSlug}`} style={s.link}>
-            Sign up
-          </Link>
-        </p>
+        {showSignupLink && (
+          <p style={s.footer}>
+            Don't have an account?{" "}
+            <Link to={`/signup/${tenantSlug}`} style={s.link}>
+              Sign up
+            </Link>
+          </p>
+        )}
       </div>
     </div>
   );
@@ -152,3 +157,4 @@ const s = {
   footer: { textAlign: "center", marginTop: 24, fontSize: 14, color: "#888"},
   link: { color: "#2563eb", textDecoration: "none", fontWeight: 500}
 };
+
