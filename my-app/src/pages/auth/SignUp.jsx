@@ -3,12 +3,15 @@ import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { checkTenant } from "../../api/authApi";
 
+const RESERVED_TENANT_SLUGS = new Set(["super-admin-tenant"]);
+
 export default function SignUp() {
   const { tenantSlug } = useParams();
   const { signup } = useAuth();
   const navigate = useNavigate();
   const [tenant, setTenant]     = useState(null);
   const [notFound, setNotFound] = useState(false);
+  const [forbidden, setForbidden] = useState(false);
   const [form, setForm]         = useState({ email: "", password: "", confirm: "" });
   const [error, setError]       = useState("");
   const [loading, setLoading]   = useState(false);
@@ -17,8 +20,36 @@ export default function SignUp() {
   const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
   useEffect(() => {
-    checkTenant(tenantSlug).then(r => setTenant(r.data)).catch(() => setNotFound(true));
+    if (!tenantSlug) return;
+    if (RESERVED_TENANT_SLUGS.has(tenantSlug.toLowerCase())) {
+      setForbidden(true);
+      setTenant(null);
+      setNotFound(false);
+      return;
+    }
+    setForbidden(false);
+    setNotFound(false);
+    checkTenant(tenantSlug)
+      .then(r => setTenant(r.data))
+      .catch((err) => {
+        if (err.response?.status === 403) {
+          setForbidden(true);
+          return;
+        }
+        setNotFound(true);
+      });
   }, [tenantSlug]);
+
+  if (forbidden) return (
+    <div style={s.page}>
+      <div style={s.card}>
+       <div style={s.logoBox}>WG</div>
+      <div style={s.logo}>WheelGo</div>
+      <p style={{ color:"#f87171", textAlign:"center", fontSize:16 }}>
+        Forbidden access.
+      </p>
+    </div></div>
+  );
 
   if (notFound) return (
     <div style={s.page}>
@@ -31,7 +62,7 @@ export default function SignUp() {
     </div></div>
   );
 
-  if (!tenant) return <div style={s.page}><div style={{ color:"#888" }}>Loading 123...</div></div>;
+  if (!tenant) return <div style={s.page}><div style={{ color:"#888" }}>Loading...</div></div>;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -51,10 +82,13 @@ export default function SignUp() {
     }
     setLoading(true);
     try {
+      if (RESERVED_TENANT_SLUGS.has(tenantSlug.toLowerCase())) {
+        throw new Error("Forbidden access.");
+      }
       await signup(tenantSlug, form.email, form.password);
       navigate(`/t/${tenantSlug}/app`);
     } catch (err) {
-      setError(err.response?.data || "Signup failed");
+      setError(err.response?.data?.message || err.message || "Signup failed");
     } finally {
       setLoading(false);
     }
