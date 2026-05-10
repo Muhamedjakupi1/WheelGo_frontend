@@ -59,11 +59,11 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="app" element={<UserDashboard />} />
-        <Route path="bookings" element={<UserBooking />} />
-        <Route path="settings" element={<UserSettings />} />
-        <Route path="profile" element={<UserProfile />} />
-        <Route path="support" element={<UserSupport />} />
+        <Route path="app" element={<TenantUserDashboard />} />
+        <Route path="bookings" element={<TenantUserBooking />} />
+        <Route path="settings" element={<TenantUserSettings />} />
+        <Route path="profile" element={<TenantUserProfile />} />
+        <Route path="support" element={<TenantUserSupport />} />
         <Route index element={<Navigate to="app" replace />} />
       </Route>
 
