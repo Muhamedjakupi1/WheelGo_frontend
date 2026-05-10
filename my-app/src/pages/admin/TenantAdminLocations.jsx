@@ -146,11 +146,17 @@ export default function TenantAdminLocations() {
       setSuccess("Location deleted successfully.");
     } catch (err) {
       setSuccess("");
-      const msg =
+      const rawMessage =
         err.response?.data?.message ||
         err.response?.data?.detail ||
         LOCATION_IN_USE_MESSAGE;
-      setConfirmError(msg);
+
+      const normalizedMessage =
+        rawMessage === "Full authentication is required to access this resource"
+          ? LOCATION_IN_USE_MESSAGE
+          : rawMessage;
+
+      setConfirmError(normalizedMessage);
     } finally {
       setConfirmLoading(false);
     }
