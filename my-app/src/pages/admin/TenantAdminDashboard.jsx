@@ -19,6 +19,7 @@ export default function TenantAdminDashboard() {
   const [stats, setStats] = useState({ vehicles: 0, categories: 0, images: 0, users: 0 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const load = async () => {
@@ -38,7 +39,9 @@ export default function TenantAdminDashboard() {
           images: images.data.length,
           users: users.data.length,
         });
+        setSuccess("Admin dashboard loaded successfully.");
       } catch (err) {
+        setSuccess("");
         setError(err.response?.data?.message || "Failed to load admin dashboard.");
       } finally {
         setLoading(false);
@@ -63,6 +66,7 @@ export default function TenantAdminDashboard() {
       </section>
 
       {error && <section style={{ ...card.panel, borderColor: "rgba(248,113,113,0.35)", color: palette.danger }}>{error}</section>}
+      {success && <section style={{ ...card.panel, borderColor: "rgba(52,211,153,0.35)", color: palette.success }}>{success}</section>}
 
       <section style={grid.cards}>
         {statsConfig.map(({ key, label, icon: Icon, tone }) => (
