@@ -119,6 +119,7 @@ export default function TenantAdminVehicles() {
   const buildPayload = () => ({
     categoryId: formData.categoryId,
     locationId: formData.locationId || null,
+    clearLocation: isEditing && !formData.locationId,
     plateNumber: formData.plateNumber,
     make: formData.make,
     model: formData.model,

@@ -62,6 +62,7 @@ export default function TenantAdminLocations() {
   };
 
   const handleEdit = (location) => {
+    const isActive = location.isActive ?? location.active ?? true;
     setSelectedId(location.id);
     setFormData({
       name: location.name || "",
@@ -71,7 +72,7 @@ export default function TenantAdminLocations() {
       latitude: location.latitude ?? "",
       longitude: location.longitude ?? "",
       phone: location.phone || "",
-      isActive: location.isActive ?? true,
+      isActive,
     });
     setSuccess("");
     setError("");
@@ -197,6 +198,10 @@ export default function TenantAdminLocations() {
                 <tbody>
                   {locations.map((location) => (
                     <tr key={location.id}>
+                      {(() => {
+                        const isActive = location.isActive ?? location.active ?? true;
+                        return (
+                          <>
                       <td style={table.cell}>
                         <div style={{ fontWeight: 700 }}>{location.name}</div>
                         <div style={{ color: palette.muted, fontSize: "0.84rem", marginTop: "4px" }}>
@@ -205,8 +210,8 @@ export default function TenantAdminLocations() {
                       </td>
                       <td style={table.cell}>{location.city}, {location.country}</td>
                       <td style={table.cell}>
-                        <span style={badge(location.isActive ? "success" : "danger")}>
-                          {location.isActive ? "Active" : "Inactive"}
+                        <span style={badge(isActive ? "success" : "danger")}>
+                          {isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
                       <td style={table.cell}>
@@ -219,6 +224,9 @@ export default function TenantAdminLocations() {
                           </button>
                         </div>
                       </td>
+                          </>
+                        );
+                      })()}
                     </tr>
                   ))}
                 </tbody>
