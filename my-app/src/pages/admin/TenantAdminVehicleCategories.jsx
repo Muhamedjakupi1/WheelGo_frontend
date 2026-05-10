@@ -9,6 +9,8 @@ import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
 
 const defaultForm = { name: "", description: "" };
+const CATEGORY_IN_USE_MESSAGE =
+  "A vehicle is attached to this category. Delete or reassign those vehicles first.";
 
 export default function TenantAdminVehicleCategories() {
   const [categories, setCategories] = useState([]);
@@ -30,7 +32,9 @@ export default function TenantAdminVehicleCategories() {
       setError("");
       const response = await getAdminVehicleCategories();
       setCategories(response.data);
+      setSuccess("Categories loaded successfully.");
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to load categories.");
     } finally {
       setLoading(false);
@@ -44,7 +48,6 @@ export default function TenantAdminVehicleCategories() {
   const resetForm = () => {
     setSelectedId(null);
     setFormData(defaultForm);
-    setSuccess("");
     setError("");
   };
 
@@ -67,15 +70,16 @@ export default function TenantAdminVehicleCategories() {
 
       if (isEditing) {
         await updateAdminVehicleCategory(selectedId, formData);
+        await loadData();
         setSuccess("Category updated successfully.");
       } else {
         await createAdminVehicleCategory(formData);
+        await loadData();
         setSuccess("Category created successfully.");
       }
-
-      await loadData();
       resetForm();
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to save category.");
     } finally {
       setSaving(false);
@@ -102,14 +106,21 @@ export default function TenantAdminVehicleCategories() {
       if (selectedId === confirmDelete.id) resetForm();
       setConfirmDelete(null);
       await loadData();
-      setSuccess("Category deleted.");
+      setSuccess("Category deleted successfully.");
     } catch (err) {
-      const msg =
+      setSuccess("");
+      const rawMessage =
         err.response?.data?.message ||
         err.response?.data?.detail ||
         (typeof err.response?.data === "string" ? err.response.data : null) ||
         "Failed to delete category.";
-      setConfirmError(msg);
+
+      const normalizedMessage =
+        rawMessage === "Full authentication is required to access this resource"
+          ? CATEGORY_IN_USE_MESSAGE
+          : rawMessage;
+
+      setConfirmError(normalizedMessage);
     } finally {
       setConfirmLoading(false);
     }
@@ -305,7 +316,7 @@ export default function TenantAdminVehicleCategories() {
         title="Delete vehicle category?"
         description={
           confirmDelete
-            ? `"${confirmDelete.name}" will be removed from the catalog. You cannot delete a category while vehicles are still assigned to it.`
+            ? `"${confirmDelete.name}" will be removed from the catalog. ${CATEGORY_IN_USE_MESSAGE}`
             : ""
         }
         error={confirmError}

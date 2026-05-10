@@ -26,7 +26,9 @@ export default function TenantAdminUsers() {
       setError("");
       const response = await getAdminUsers();
       setUsers(response.data);
+      setSuccess("Users loaded successfully.");
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to load users.");
     } finally {
       setLoading(false);
@@ -40,7 +42,6 @@ export default function TenantAdminUsers() {
   const resetForm = () => {
     setSelectedId(null);
     setFormData(defaultForm);
-    setSuccess("");
     setError("");
   };
 
@@ -74,10 +75,11 @@ export default function TenantAdminUsers() {
       }
 
       await updateAdminUser(selectedId, payload);
-      setSuccess("User updated successfully.");
       await loadData();
+      setSuccess("User updated successfully.");
       resetForm();
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to update user.");
     } finally {
       setSaving(false);

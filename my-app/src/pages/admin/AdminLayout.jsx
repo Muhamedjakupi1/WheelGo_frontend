@@ -1,11 +1,14 @@
-﻿import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
-import { CarFront, Image, LayoutGrid, LogOut, Tags, Users } from "lucide-react";
+import { useEffect, useState } from "react";
+import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
+import { CarFront, Image, LayoutGrid, LogOut, MapPin, Tags, Users } from "lucide-react";
+import { getAdminTenantSettings } from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
 import { button, layout, palette } from "./adminStyles";
 
 const items = [
   { to: "", label: "Dashboard", icon: LayoutGrid, end: true },
   { to: "vehicles", label: "Vehicles", icon: CarFront },
+  { to: "locations", label: "Locations", icon: MapPin },
   { to: "vehicle-categories", label: "Categories", icon: Tags },
   { to: "vehicle-images", label: "Vehicle Images", icon: Image },
   { to: "users", label: "Users", icon: Users },
@@ -15,14 +18,38 @@ export default function AdminLayout() {
   const { tenantSlug } = useParams();
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const [themeColor, setThemeColor] = useState(null);
+
+  useEffect(() => {
+    let active = true;
+
+    getAdminTenantSettings()
+      .then(({ data }) => {
+        if (active) {
+          setThemeColor(data?.themeColor || null);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setThemeColor(null);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [tenantSlug]);
 
   const handleLogout = async () => {
     await logout();
     navigate(`/login/${tenantSlug}`);
   };
 
+  const shellStyle = themeColor ? { ...layout.shell, background: themeColor } : layout.shell;
+  const mainStyle = themeColor ? { ...layout.main, background: themeColor } : layout.main;
+
   return (
-    <div style={layout.shell}>
+    <div style={shellStyle}>
       <aside style={layout.sidebar}>
         <div style={layout.brand}>
           <div style={layout.brandMark}>WG</div>
@@ -71,10 +98,9 @@ export default function AdminLayout() {
         </button>
       </aside>
 
-      <main style={layout.main}>
+      <main style={mainStyle}>
         <Outlet />
       </main>
     </div>
   );
 }
-

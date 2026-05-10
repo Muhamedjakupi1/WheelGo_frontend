@@ -32,6 +32,12 @@ const emptyCreateForm = {
     active: true,
     adminEmail: "",
     adminPassword: "",
+    settings: {
+        currency: "EUR",
+        timezone: "UTC",
+        logoUrl: "",
+        themeColor: "#1A73E8",
+    },
 };
 
 export default function AdminTenants() {
@@ -86,6 +92,12 @@ export default function AdminTenants() {
             active: Boolean(tenant.active),
             adminEmail: "",
             adminPassword: "",
+            settings: {
+                currency: tenant.settings?.currency || "EUR",
+                timezone: tenant.settings?.timezone || "UTC",
+                logoUrl: tenant.settings?.logoUrl || "",
+                themeColor: tenant.settings?.themeColor || "#1A73E8",
+            },
         });
         setError("");
         setModal("edit");
@@ -108,6 +120,12 @@ export default function AdminTenants() {
                     plan: form.plan,
                     adminEmail: form.adminEmail.trim().toLowerCase(),
                     adminPassword: form.adminPassword,
+                    settings: {
+                        currency: form.settings.currency.trim(),
+                        timezone: form.settings.timezone.trim(),
+                        logoUrl: form.settings.logoUrl.trim() || null,
+                        themeColor: form.settings.themeColor.trim() || null,
+                    },
                 });
 
                 closeModal();
@@ -118,6 +136,12 @@ export default function AdminTenants() {
                     name: form.name.trim(),
                     plan: form.plan,
                     isActive: form.active,
+                    settings: {
+                        currency: form.settings.currency.trim(),
+                        timezone: form.settings.timezone.trim(),
+                        logoUrl: form.settings.logoUrl.trim(),
+                        themeColor: form.settings.themeColor.trim(),
+                    },
                 });
 
                 closeModal();
@@ -228,6 +252,8 @@ export default function AdminTenants() {
                                         "Slug",
                                         "Schema",
                                         "Plan",
+                                        "Currency",
+                                        "Timezone",
                                         "Active",
                                         "Created At",
                                         "Updated At",
@@ -256,6 +282,10 @@ export default function AdminTenants() {
                                                 {t.plan}
                                             </span>
                                         </td>
+                                        <td style={s.td}>
+                                            <code style={s.code}>{t.settings?.currency || "EUR"}</code>
+                                        </td>
+                                        <td style={s.td}>{t.settings?.timezone || "UTC"}</td>
                                         <td style={s.td}>
                                             <span
                                                 style={{

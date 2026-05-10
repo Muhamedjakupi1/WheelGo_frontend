@@ -1,5 +1,5 @@
 import axios from "axios";
-import { getToken, clearAuth } from "../utils/auth";
+import { getToken } from "../utils/auth";
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080",
@@ -24,13 +24,7 @@ http.interceptors.request.use((config) => {
 
 http.interceptors.response.use(
   (res) => res,
-  (err) => {
-    if (err.response?.status === 401) {
-      clearAuth();
-      window.location.href = "/login";
-    }
-    return Promise.reject(err);
-  }
+  (err) => Promise.reject(err)
 );
 
 export default http;
