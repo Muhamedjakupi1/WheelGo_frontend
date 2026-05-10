@@ -14,7 +14,7 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [checkingTenant, setCheckingTenant] = useState(true);
   const [tenantExists, setTenantExists] = useState(true);
-  const emailRegex = /^[^\\s@]+@[^\\s@]+\.[^\\s@]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   useEffect(() => {
     if (!tenantSlug) {

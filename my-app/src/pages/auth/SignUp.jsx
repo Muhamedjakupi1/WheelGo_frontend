@@ -83,7 +83,7 @@ export default function SignUp() {
     }
     setLoading(true);
     try {
-      if (RESERVED_TENANT_SLUGS.has(tenantSlug.toLowerCase())) {
+      if (RESERVED_SIGNUP_TENANTS.has(tenantSlug.toLowerCase())) {
         throw new Error("Forbidden access.");
       }
       await signup(tenantSlug, form.email, form.password);
