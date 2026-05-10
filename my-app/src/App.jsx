@@ -6,11 +6,11 @@ import Login from "./pages/auth/Login";
 import SignUp from "./pages/auth/SignUp";
 import AdminTenants from "./pages/AdminTenants";
 import UserLayout from "./pages/user/UserLayout";
-import TenantUserDashboard from "./pages/user/TenantUserDashboard";
-import TenantUserBooking from "./pages/user/TenantUserBooking";
-import TenantUserSettings from "./pages/user/TenantUserSettings";
-import TenantUserProfile from "./pages/user/TenantUserPorfile";
-import TenantUserSupport from "./pages/user/TenantUserSupport";
+import TenantUserDashboard from "./pages/user/UserDashboard";
+import TenantUserBooking from "./pages/user/UserBooking";
+import TenantUserSettings from "./pages/user/UserSettings";
+import TenantUserProfile from "./pages/user/UserPorfile";
+import TenantUserSupport from "./pages/user/UserSupport";
 import AdminLayout from "./pages/admin/AdminLayout";
 import TenantAdminDashboard from "./pages/admin/TenantAdminDashboard";
 import TenantAdminLocations from "./pages/admin/TenantAdminLocations";
@@ -59,11 +59,11 @@ export default function App() {
           </ProtectedRoute>
         }
       >
-        <Route path="app" element={<TenantUserDashboard />} />
-        <Route path="bookings" element={<TenantUserBooking />} />
-        <Route path="settings" element={<TenantUserSettings />} />
-        <Route path="profile" element={<TenantUserProfile />} />
-        <Route path="support" element={<TenantUserSupport />} />
+        <Route path="app" element={<UserDashboard />} />
+        <Route path="bookings" element={<UserBooking />} />
+        <Route path="settings" element={<UserSettings />} />
+        <Route path="profile" element={<UserProfile />} />
+        <Route path="support" element={<UserSupport />} />
         <Route index element={<Navigate to="app" replace />} />
       </Route>
 
