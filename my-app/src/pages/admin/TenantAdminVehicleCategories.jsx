@@ -9,6 +9,8 @@ import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
 
 const defaultForm = { name: "", description: "" };
+const CATEGORY_IN_USE_MESSAGE =
+  "A vehicle is attached to this category. Delete or reassign those vehicles first.";
 
 export default function TenantAdminVehicleCategories() {
   const [categories, setCategories] = useState([]);
@@ -104,12 +106,18 @@ export default function TenantAdminVehicleCategories() {
       await loadData();
       setSuccess("Category deleted.");
     } catch (err) {
-      const msg =
+      const rawMessage =
         err.response?.data?.message ||
         err.response?.data?.detail ||
         (typeof err.response?.data === "string" ? err.response.data : null) ||
         "Failed to delete category.";
-      setConfirmError(msg);
+
+      const normalizedMessage =
+        rawMessage === "Full authentication is required to access this resource"
+          ? CATEGORY_IN_USE_MESSAGE
+          : rawMessage;
+
+      setConfirmError(normalizedMessage);
     } finally {
       setConfirmLoading(false);
     }
@@ -305,7 +313,7 @@ export default function TenantAdminVehicleCategories() {
         title="Delete vehicle category?"
         description={
           confirmDelete
-            ? `"${confirmDelete.name}" will be removed from the catalog. You cannot delete a category while vehicles are still assigned to it.`
+            ? `"${confirmDelete.name}" will be removed from the catalog. ${CATEGORY_IN_USE_MESSAGE}`
             : ""
         }
         error={confirmError}
