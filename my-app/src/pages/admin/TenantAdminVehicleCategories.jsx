@@ -32,7 +32,9 @@ export default function TenantAdminVehicleCategories() {
       setError("");
       const response = await getAdminVehicleCategories();
       setCategories(response.data);
+      setSuccess("Categories loaded successfully.");
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to load categories.");
     } finally {
       setLoading(false);
@@ -46,7 +48,6 @@ export default function TenantAdminVehicleCategories() {
   const resetForm = () => {
     setSelectedId(null);
     setFormData(defaultForm);
-    setSuccess("");
     setError("");
   };
 
@@ -69,15 +70,16 @@ export default function TenantAdminVehicleCategories() {
 
       if (isEditing) {
         await updateAdminVehicleCategory(selectedId, formData);
+        await loadData();
         setSuccess("Category updated successfully.");
       } else {
         await createAdminVehicleCategory(formData);
+        await loadData();
         setSuccess("Category created successfully.");
       }
-
-      await loadData();
       resetForm();
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to save category.");
     } finally {
       setSaving(false);
@@ -104,8 +106,9 @@ export default function TenantAdminVehicleCategories() {
       if (selectedId === confirmDelete.id) resetForm();
       setConfirmDelete(null);
       await loadData();
-      setSuccess("Category deleted.");
+      setSuccess("Category deleted successfully.");
     } catch (err) {
+      setSuccess("");
       const rawMessage =
         err.response?.data?.message ||
         err.response?.data?.detail ||

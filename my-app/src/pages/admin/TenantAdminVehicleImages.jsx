@@ -42,7 +42,9 @@ export default function TenantAdminVehicleImages() {
       const [imagesRes, vehiclesRes] = await Promise.all([getAdminVehicleImages(), getAdminVehicles()]);
       setImages(imagesRes.data);
       setVehicles(vehiclesRes.data);
+      setSuccess("Vehicle images loaded successfully.");
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to load vehicle images.");
     } finally {
       setLoading(false);
@@ -57,7 +59,6 @@ export default function TenantAdminVehicleImages() {
     setSelectedId(null);
     setFormData(defaultForm);
     setSelectedFile(null);
-    setSuccess("");
     setError("");
   };
 
@@ -86,6 +87,7 @@ export default function TenantAdminVehicleImages() {
           patch.append("file", selectedFile);
         }
         await updateAdminVehicleImage(selectedId, patch);
+        await loadData();
         setSuccess("Vehicle image updated successfully.");
       } else {
         if (!selectedFile) {
@@ -103,12 +105,12 @@ export default function TenantAdminVehicleImages() {
         multipart.append("file", selectedFile);
         multipart.append("isPrimary", String(formData.isPrimary));
         await uploadAdminVehicleImage(multipart);
-        setSuccess("Vehicle image uploaded successfully.");
+        await loadData();
+        setSuccess("Vehicle image created successfully.");
       }
-
-      await loadData();
       resetForm();
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to save vehicle image.");
     } finally {
       setSaving(false);
@@ -138,8 +140,9 @@ export default function TenantAdminVehicleImages() {
       if (selectedId === confirmDelete.id) resetForm();
       setConfirmDelete(null);
       await loadData();
-      setSuccess("Image deleted.");
+      setSuccess("Vehicle image deleted successfully.");
     } catch (err) {
+      setSuccess("");
       const msg =
         err.response?.data?.message ||
         err.response?.data?.detail ||

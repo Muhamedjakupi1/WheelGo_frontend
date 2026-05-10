@@ -13,6 +13,7 @@ import TenantUserProfile from "./pages/user/TenantUserPorfile";
 import TenantUserSupport from "./pages/user/TenantUserSupport";
 import AdminLayout from "./pages/admin/AdminLayout";
 import TenantAdminDashboard from "./pages/admin/TenantAdminDashboard";
+import TenantAdminLocations from "./pages/admin/TenantAdminLocations";
 import TenantAdminVehicles from "./pages/admin/TenantAdminVehicles";
 import TenantAdminVehicleCategories from "./pages/admin/TenantAdminVehicleCategories";
 import TenantAdminVehicleImages from "./pages/admin/TenantAdminVehicleImages";
@@ -43,6 +44,7 @@ export default function App() {
         }
       >
         <Route index element={<TenantAdminDashboard />} />
+        <Route path="locations" element={<TenantAdminLocations />} />
         <Route path="vehicles" element={<TenantAdminVehicles />} />
         <Route path="vehicle-categories" element={<TenantAdminVehicleCategories />} />
         <Route path="vehicle-images" element={<TenantAdminVehicleImages />} />

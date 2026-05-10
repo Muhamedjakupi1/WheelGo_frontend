@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
-import { CarFront, Image, LayoutGrid, LogOut, Tags, Users } from "lucide-react";
+import { CarFront, Image, LayoutGrid, LogOut, MapPin, Tags, Users } from "lucide-react";
 import { getAdminTenantSettings } from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
 import { button, layout, palette } from "./adminStyles";
@@ -8,6 +8,7 @@ import { button, layout, palette } from "./adminStyles";
 const items = [
   { to: "", label: "Dashboard", icon: LayoutGrid, end: true },
   { to: "vehicles", label: "Vehicles", icon: CarFront },
+  { to: "locations", label: "Locations", icon: MapPin },
   { to: "vehicle-categories", label: "Categories", icon: Tags },
   { to: "vehicle-images", label: "Vehicle Images", icon: Image },
   { to: "users", label: "Users", icon: Users },

@@ -3,6 +3,7 @@ import {
   createAdminVehicle,
   deleteAdminVehicle,
   getAdminVehicleCategories,
+  getAdminLocations,
   getAdminVehicles,
   updateAdminVehicle,
 } from "../../api/adminApi";
@@ -12,10 +13,10 @@ import { badge, button, card, emptyState, form, grid, layout, palette, table } f
 
 const defaultForm = {
   categoryId: "",
+  locationId: "",
   plateNumber: "",
   make: "",
   model: "",
-  location: "",
   year: "",
   color: "",
   vin: "",
@@ -49,6 +50,7 @@ const vehicleThumbPlaceholder = {
 export default function TenantAdminVehicles() {
   const [vehicles, setVehicles] = useState([]);
   const [categories, setCategories] = useState([]);
+  const [locations, setLocations] = useState([]);
   const [formData, setFormData] = useState(defaultForm);
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -65,10 +67,17 @@ export default function TenantAdminVehicles() {
     try {
       setLoading(true);
       setError("");
-      const [vehiclesRes, categoriesRes] = await Promise.all([getAdminVehicles(), getAdminVehicleCategories()]);
+      const [vehiclesRes, categoriesRes, locationsRes] = await Promise.all([
+        getAdminVehicles(),
+        getAdminVehicleCategories(),
+        getAdminLocations(),
+      ]);
       setVehicles(vehiclesRes.data);
       setCategories(categoriesRes.data);
+      setLocations(locationsRes.data);
+      setSuccess("Vehicles, categories, and locations loaded successfully.");
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to load vehicles.");
     } finally {
       setLoading(false);
@@ -82,7 +91,6 @@ export default function TenantAdminVehicles() {
   const resetForm = () => {
     setSelectedId(null);
     setFormData(defaultForm);
-    setSuccess("");
     setError("");
   };
 
@@ -90,13 +98,13 @@ export default function TenantAdminVehicles() {
     setSelectedId(vehicle.id);
     setFormData({
       categoryId: vehicle.categoryId || "",
+      locationId: vehicle.locationId || "",
       plateNumber: vehicle.plateNumber || "",
       make: vehicle.make || "",
       model: vehicle.model || "",
       year: vehicle.year || "",
       color: vehicle.color || "",
       vin: vehicle.vin || "",
-      location: vehicle.location || "",
       fuelType: vehicle.fuelType || "PETROL",
       transmission: vehicle.transmission || "MANUAL",
       seats: vehicle.seats || "5",
@@ -110,13 +118,13 @@ export default function TenantAdminVehicles() {
 
   const buildPayload = () => ({
     categoryId: formData.categoryId,
+    locationId: formData.locationId || null,
     plateNumber: formData.plateNumber,
     make: formData.make,
     model: formData.model,
     year: Number(formData.year),
     color: formData.color || null,
     vin: formData.vin || null,
-    location: formData.location || null,
     fuelType: formData.fuelType,
     transmission: formData.transmission,
     seats: Number(formData.seats),
@@ -135,15 +143,16 @@ export default function TenantAdminVehicles() {
 
       if (isEditing) {
         await updateAdminVehicle(selectedId, payload);
+        await loadData();
         setSuccess("Vehicle updated successfully.");
       } else {
         await createAdminVehicle(payload);
+        await loadData();
         setSuccess("Vehicle created successfully.");
       }
-
-      await loadData();
       resetForm();
     } catch (err) {
+      setSuccess("");
       setError(err.response?.data?.message || "Failed to save vehicle.");
     } finally {
       setSaving(false);
@@ -173,8 +182,9 @@ export default function TenantAdminVehicles() {
       if (selectedId === confirmDelete.id) resetForm();
       setConfirmDelete(null);
       await loadData();
-      setSuccess("Vehicle deleted.");
+      setSuccess("Vehicle deleted successfully.");
     } catch (err) {
+      setSuccess("");
       const msg =
         err.response?.data?.message ||
         err.response?.data?.detail ||
@@ -213,6 +223,7 @@ export default function TenantAdminVehicles() {
                   <tr>
                     <th style={{ ...table.headCell, paddingLeft: "14px" }}>Vehicle</th>
                     <th style={table.headCell}>Category</th>
+                    <th style={table.headCell}>Location</th>
                     <th style={table.headCell}>Rate</th>
                     <th style={table.headCell}>Status</th>
                     <th style={table.headCell}>Actions</th>
@@ -255,6 +266,7 @@ export default function TenantAdminVehicles() {
                           </div>
                         </td>
                         <td style={table.cell}>{vehicle.categoryName || "-"}</td>
+                        <td style={table.cell}>{vehicle.locationName || "-"}</td>
                         <td style={table.cell}>€{vehicle.dailyRate}</td>
                         <td style={{ ...table.cell, verticalAlign: "middle" }}>
                           <span style={badge(vehicle.status === "AVAILABLE" ? "success" : vehicle.status === "RENTED" ? "warning" : "danger")}>{vehicle.status}</span>
@@ -297,8 +309,7 @@ export default function TenantAdminVehicles() {
             </div>
             <div style={form.field}>
               <label style={form.label}>Location</label>
-
-              <input
+              <select
                 style={form.input}
                 value={formData.locationId}
                 onChange={(e) =>
@@ -307,8 +318,14 @@ export default function TenantAdminVehicles() {
                     locationId: e.target.value,
                   })
                 }
-                placeholder="Enter location"
-              />
+              >
+                <option value="">No location</option>
+                {locations.map((location) => (
+                  <option key={location.id} value={location.id}>
+                    {location.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
             <div style={form.row}>
