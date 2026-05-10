@@ -63,7 +63,7 @@ export default function SignUp() {
     </div></div>
   );
 
-  if (!tenant) return <div style={s.page}><div style={{ color:"#888" }}>Loading 123...</div></div>;
+  if (!tenant) return <div style={s.page}><div style={{ color:"#888" }}>Loading...</div></div>;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -83,6 +83,9 @@ export default function SignUp() {
     }
     setLoading(true);
     try {
+      if (RESERVED_TENANT_SLUGS.has(tenantSlug.toLowerCase())) {
+        throw new Error("Forbidden access.");
+      }
       await signup(tenantSlug, form.email, form.password);
       navigate(`/t/${tenantSlug}/app`);
     } catch (err) {

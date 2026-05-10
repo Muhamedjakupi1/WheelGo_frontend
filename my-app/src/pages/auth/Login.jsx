@@ -1,7 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { checkTenant } from "../../api/authApi";
 
 const RESERVED_SIGNUP_TENANTS = new Set(["super-admin-tenant"]);
 
@@ -9,8 +8,6 @@ export default function Login() {
   const { tenantSlug } = useParams();
   const { signIn } = useAuth();
   const navigate = useNavigate();
-  const [tenant, setTenant] = useState(null);
-  const [notFound, setNotFound] = useState(false);
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -21,29 +18,11 @@ export default function Login() {
       const lastTenant = localStorage.getItem("last_tenant_slug");
       if (lastTenant) {
         navigate(`/login/${lastTenant}`, { replace: true });
-      } else {
-        setNotFound(true);
       }
-      return;
     }
-    checkTenant(tenantSlug).then(r => setTenant(r.data)).catch(() => setNotFound(true))
-  }, [tenantSlug]);
+  }, [tenantSlug, navigate]);
 
-  if (notFound) return (
-    <div style={s.page}>
-      <div style={s.card}>
-        <div style={s.logoBox}>WG</div>
-        <p style={{ color: "#f87171", textAlign: "center", marginTop: 20 }}>
-          Sorry, this company (tenant) was not found.
-        </p>
-        <Link to="/" style={{ color: "#2563eb", display: "block", textAlign: "center", marginTop: 10 }}>
-          Go back home
-        </Link>
-      </div>
-    </div>
-  );
-
-  if (!tenant) return <div style={s.page}><div style={{ color: "#888" }}>Loading...</div></div>;
+  if (!tenantSlug) return <div style={s.page}><div style={{ color: "#888" }}>Loading...</div></div>;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -82,7 +61,9 @@ export default function Login() {
           <div style={s.logo}>WheelGo</div>
         </div>
         <h2 style={s.title}>Sign in</h2>
-        <p style={s.sub}>Enter your account credentials</p>
+        <p style={s.sub}>
+          Enter your account credentials for {tenantSlug}.
+        </p>
 
         <form onSubmit={handleSubmit} style={s.form}>
           <div style={s.field}>

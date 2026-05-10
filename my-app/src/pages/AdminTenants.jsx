@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import {
     getAllTenants,
     createTenant,
@@ -8,6 +7,7 @@ import {
 } from "../api/tenantApi";
 import DeleteModal from "../components/DeleteModal";
 import CreateAndEditModal from "../components/CreateAndEditModal";
+import { useAuth } from "../context/AuthContext";
 
 const PLAN_COLORS = {
     FREE: { bg: "#0f2a1a", color: "#22c55e", border: "#14532d" },
@@ -35,6 +35,7 @@ const emptyCreateForm = {
 };
 
 export default function AdminTenants() {
+    const { logout } = useAuth();
     const [tenants, setTenants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modal, setModal] = useState(null); // null | "create" | "edit"
@@ -44,8 +45,6 @@ export default function AdminTenants() {
     const [form, setForm] = useState(emptyCreateForm);
     const [error, setError] = useState("");
     const [alert, setAlert] = useState({ type: "", message: "" });
-
-    const navigate = useNavigate();
 
     const showAlert = (type, message) => {
         setAlert({ type, message });
@@ -71,12 +70,6 @@ export default function AdminTenants() {
     useEffect(() => {
         load();
     }, []);
-
-    const logout = () => {
-        localStorage.removeItem("auth");
-        localStorage.removeItem("token");
-        navigate("/login");
-    };
 
     const openCreate = () => {
         setForm(emptyCreateForm);
