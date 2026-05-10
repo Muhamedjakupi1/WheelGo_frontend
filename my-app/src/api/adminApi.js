@@ -22,4 +22,5 @@ export const deleteAdminVehicleImage = (id) => http.delete(`/api/v1/admin/vehicl
 
 export const getAdminUsers = () => http.get("/api/v1/admin/users");
 export const updateAdminUser = (id, data) => http.patch(`/api/v1/admin/users/${id}`, data);
+export const getAdminTenantSettings = () => http.get("/api/v1/admin/tenant-settings");
 
