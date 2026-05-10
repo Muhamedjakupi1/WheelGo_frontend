@@ -11,7 +11,7 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const emailRegex = /^[^\\s@]+@[^\\s@]+\.[^\\s@]+$/;
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   useEffect(() => {
     if (!tenantSlug) {

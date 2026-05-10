@@ -82,17 +82,14 @@ export default function SignUp() {
       return;
     }
     setLoading(true);
-    try {
-      if (RESERVED_TENANT_SLUGS.has(tenantSlug.toLowerCase())) {
-        throw new Error("Forbidden access.");
-      }
-      await signup(tenantSlug, form.email, form.password);
-      navigate(`/t/${tenantSlug}/app`);
-    } catch (err) {
-      setError(err.response?.data?.message || err.response?.data || "Signup failed");
-    } finally {
-      setLoading(false);
-    }
+      try {                                                                                                                                         
+        await signup(tenantSlug, form.email, form.password);                                                                                        
+        navigate(`/t/${tenantSlug}/app`);                                                                                                           
+      } catch (err) {                                                                                                                               
+        setError(err.response?.data?.message || err.response?.data || "Signup failed");                                                             
+      } finally {                                                                                                                                   
+        setLoading(false);                                                                                                                          
+      }     
   };
 
   return (
