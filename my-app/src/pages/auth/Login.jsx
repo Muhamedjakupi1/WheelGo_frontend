@@ -1,9 +1,8 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
-import { checkTenant } from "../../api/authApi";
 import { useAuth } from "../../context/AuthContext";
 
-const RESERVED_TENANTS = new Set(["super-admin-tenant"]);
+const RESERVED_SIGNUP_TENANTS = new Set(["super-admin-tenant"]);
 
 export default function Login() {
   const { tenantSlug } = useParams();
@@ -12,8 +11,6 @@ export default function Login() {
   const [form, setForm] = useState({ email: "", password: "" });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const [checkingTenant, setCheckingTenant] = useState(true);
-  const [tenantExists, setTenantExists] = useState(true);
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
   useEffect(() => {
@@ -25,56 +22,7 @@ export default function Login() {
     }
   }, [tenantSlug, navigate]);
 
-  useEffect(() => {
-    if (!tenantSlug) {
-      setCheckingTenant(true);
-      return;
-    }
-
-    if (RESERVED_TENANTS.has(tenantSlug.toLowerCase())) {
-      setTenantExists(true);
-      setCheckingTenant(false);
-      return;
-    }
-
-    let active = true;
-    setCheckingTenant(true);
-    setTenantExists(true);
-
-    checkTenant(tenantSlug)
-      .then(() => {
-        if (active) {
-          setTenantExists(true);
-          setCheckingTenant(false);
-        }
-      })
-      .catch(() => {
-        if (active) {
-          setTenantExists(false);
-          setCheckingTenant(false);
-        }
-      });
-
-    return () => {
-      active = false;
-    };
-  }, [tenantSlug]);
-
-  if (!tenantSlug || checkingTenant) return <div style={s.page}><div style={{ color: "#888" }}>Loading...</div></div>;
-
-  if (!tenantExists) {
-    return (
-      <div style={s.page}>
-        <div style={s.card}>
-          <div style={s.header}>
-            <div style={s.logoBox}>WG</div>
-            <div style={s.logo}>WheelGo</div>
-          </div>
-          <p style={s.error}>Sorry, this tenant does not exist.</p>
-        </div>
-      </div>
-    );
-  }
+  if (!tenantSlug) return <div style={s.page}><div style={{ color: "#888" }}>Loading...</div></div>;
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -103,7 +51,7 @@ export default function Login() {
     }
   };
 
-  const showSignupLink = tenantSlug && !RESERVED_TENANTS.has(tenantSlug.toLowerCase());
+  const showSignupLink = tenantSlug && !RESERVED_SIGNUP_TENANTS.has(tenantSlug.toLowerCase());
 
   return (
     <div style={s.page}>
@@ -190,4 +138,3 @@ const s = {
   footer: { textAlign: "center", marginTop: 24, fontSize: 14, color: "#888"},
   link: { color: "#2563eb", textDecoration: "none", fontWeight: 500}
 };
-
