@@ -2,6 +2,11 @@ import React, { useEffect, useState } from "react";
 import { User, Mail, MapPin, Calendar, Car, Star, Edit3, Camera, Save, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { getMyProfile, updateMyProfile } from "../../api/userProfileApi";
+import {
+  getMyDriverLicense,
+  verifyMyDriverLicense,
+} from "../../api/driverLicenseApi";
+import { resolveMediaUrl } from "../../utils/media";
 
 const emptyForm = {
   firstName: "",
@@ -14,15 +19,28 @@ const emptyForm = {
   country: "",
 };
 
+const emptyLicenseForm = {
+  licenseNumber: "",
+  issuingCountry: "",
+  expiryDate: "",
+};
+
 export default function TenantUserProfile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState(emptyForm);
+  const [license, setLicense] = useState(null);
+  const [licenseForm, setLicenseForm] = useState(emptyLicenseForm);
+  const [licenseFiles, setLicenseFiles] = useState({ front: null, back: null });
+  const [licensePreviews, setLicensePreviews] = useState({ front: "", back: "" });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [licenseVerifying, setLicenseVerifying] = useState(false);
+  const [licenseMessage, setLicenseMessage] = useState({ type: "", text: "" });
+  const [verification, setVerification] = useState(null);
 
   useEffect(() => {
     loadProfile();
@@ -30,8 +48,12 @@ export default function TenantUserProfile() {
 
   const loadProfile = async () => {
     try {
-      const { data } = await getMyProfile();
-      applyProfile(data);
+      const [{ data: profileData }, { data: licenseData }] = await Promise.all([
+        getMyProfile(),
+        getMyDriverLicense(),
+      ]);
+      applyProfile(profileData);
+      applyLicense(licenseData);
       setError("");
     } catch (err) {
       console.error("Failed to load profile", err);
@@ -55,8 +77,23 @@ export default function TenantUserProfile() {
     });
   };
 
+  const applyLicense = (data, syncForm = true) => {
+    setLicense(data);
+    if (syncForm) {
+      setLicenseForm({
+        licenseNumber: data?.licenseNumber || "",
+        issuingCountry: data?.issuingCountry || "",
+        expiryDate: data?.expiryDate || "",
+      });
+    }
+  };
+
   const handleChange = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleLicenseChange = (field, value) => {
+    setLicenseForm((current) => ({ ...current, [field]: value }));
   };
 
   const handleEdit = () => {
@@ -113,6 +150,58 @@ export default function TenantUserProfile() {
       : "-";
 
   const memberSince = user?.createdAt ? new Date(user.createdAt).getFullYear() : "-";
+  const licenseStatus = license?.verified ? "Verified" : "Pending verification";
+
+  const handleSelectLicenseImage = (side, file) => {
+    if (!file) return;
+
+    setLicenseFiles((current) => ({ ...current, [side]: file }));
+    setLicensePreviews((current) => {
+      if (current[side]) {
+        URL.revokeObjectURL(current[side]);
+      }
+      return { ...current, [side]: URL.createObjectURL(file) };
+    });
+    setLicenseMessage({ type: "", text: "" });
+    setVerification(null);
+  };
+
+  const handleVerifyLicense = async () => {
+    if (!licenseForm.licenseNumber.trim() || !licenseForm.issuingCountry.trim() || !licenseForm.expiryDate) {
+      setLicenseMessage({ type: "error", text: "Fill license number, issuing country, and expiry date before verification." });
+      return;
+    }
+    if ((!licenseFiles.front && !license?.frontImageUrl) || (!licenseFiles.back && !license?.backImageUrl)) {
+      setLicenseMessage({ type: "error", text: "Choose both front and back images before verification." });
+      return;
+    }
+
+    setLicenseVerifying(true);
+    setLicenseMessage({ type: "", text: "" });
+
+    try {
+      const payload = {
+        licenseNumber: licenseForm.licenseNumber.trim(),
+        issuingCountry: licenseForm.issuingCountry.trim(),
+        expiryDate: licenseForm.expiryDate || null,
+      };
+
+      const { data } = await verifyMyDriverLicense(payload, licenseFiles);
+      setVerification(data);
+      applyLicense(data.license);
+      setLicenseFiles({ front: null, back: null });
+      setLicensePreviews({ front: "", back: "" });
+      setLicenseMessage({
+        type: data.verified ? "success" : "error",
+        text: data.verified ? "AI verification passed and details were saved." : "AI verification failed. Details were saved, but the photos do not look valid.",
+      });
+    } catch (err) {
+      console.error("Failed to verify driver license", err);
+      setLicenseMessage({ type: "error", text: readError(err, "Failed to verify driver license.") });
+    } finally {
+      setLicenseVerifying(false);
+    }
+  };
 
   if (loading) {
     return <div style={s.mainContent}>Loading profile...</div>;
@@ -202,6 +291,77 @@ export default function TenantUserProfile() {
             </div>
           )}
         </section>
+
+        <section style={{ ...s.card, gridColumn: "span 2" }}>
+          <div style={s.licenseHeader}>
+            <div>
+              <h2 style={s.cardTitle}>Driver License Verification</h2>
+              <p style={s.licenseSubtitle}>
+                Enter the license details, choose both sides, then verify. Everything is saved during AI verification.
+              </p>
+            </div>
+            <span style={license?.verified ? s.verifiedBadge : s.pendingBadge}>{licenseStatus}</span>
+          </div>
+
+          {licenseMessage.text ? (
+            <div style={licenseMessage.type === "success" ? s.successBanner : s.errorBanner}>{licenseMessage.text}</div>
+          ) : null}
+
+          <div style={s.licenseDetailsPanel}>
+            <div style={s.formGrid}>
+              <FormField
+                label="License Number"
+                value={licenseForm.licenseNumber}
+                onChange={(value) => handleLicenseChange("licenseNumber", value)}
+              />
+              <FormField
+                label="Issuing Country"
+                value={licenseForm.issuingCountry}
+                onChange={(value) => handleLicenseChange("issuingCountry", value)}
+              />
+              <FormField
+                label="Expiry Date"
+                type="date"
+                value={licenseForm.expiryDate}
+                onChange={(value) => handleLicenseChange("expiryDate", value)}
+              />
+            </div>
+          </div>
+
+          <div style={s.licenseActions}>
+            <button style={s.primaryBtn} type="button" onClick={handleVerifyLicense} disabled={licenseVerifying}>
+              <Save size={18} /> {licenseVerifying ? "Verifying..." : "Verify With AI"}
+            </button>
+          </div>
+
+          <div style={s.licenseUploadGrid}>
+            <UploadCard
+              title="Front Image"
+              imageUrl={license?.frontImageUrl}
+              previewUrl={licensePreviews.front}
+              onFile={(file) => handleSelectLicenseImage("front", file)}
+            />
+            <UploadCard
+              title="Back Image"
+              imageUrl={license?.backImageUrl}
+              previewUrl={licensePreviews.back}
+              onFile={(file) => handleSelectLicenseImage("back", file)}
+            />
+          </div>
+
+          {verification ? (
+            <div style={s.verificationPanel}>
+              <h3 style={s.verificationTitle}>AI Verification Result</h3>
+              <div style={s.verificationGrid}>
+                <InfoRow icon={<User size={18} />} label="Verdict" value={verification.verdict || "-"} />
+                <InfoRow icon={<Star size={18} />} label="AI Decision" value={verification.verified ? "Yes" : "No"} />
+              </div>
+              <div style={s.verificationMeta}>
+                <p style={s.verificationText}>Recommendation: {verification.recommendation || "-"}</p>
+              </div>
+            </div>
+          ) : null}
+        </section>
       </div>
     </div>
   );
@@ -239,6 +399,35 @@ const StaticField = ({ label, value }) => (
     <div style={s.staticValue}>{value}</div>
   </div>
 );
+
+const UploadCard = ({ title, imageUrl, previewUrl, onFile }) => (
+  <div style={s.uploadCard}>
+    <div style={s.uploadHeader}>
+      <h3 style={s.uploadTitle}>{title}</h3>
+      <label style={s.uploadButton}>
+        Take / Upload Photo
+        <input
+          type="file"
+          accept="image/*"
+          capture="environment"
+          style={{ display: "none" }}
+          onChange={(e) => onFile(e.target.files?.[0] || null)}
+        />
+      </label>
+    </div>
+    {previewUrl || imageUrl ? (
+      <img src={previewUrl || resolveMediaUrl(imageUrl)} alt={title} style={s.licensePreview} />
+    ) : (
+      <div style={s.emptyPreview}>No image uploaded yet</div>
+    )}
+  </div>
+);
+
+const readError = (error, fallback) =>
+  error?.response?.data?.message ||
+  error?.response?.data?.error ||
+  error?.message ||
+  fallback;
 
 const s = {
   mainContent: { width: "100%", color: "#fff" },
@@ -351,5 +540,144 @@ const s = {
     minHeight: "44px",
     display: "flex",
     alignItems: "center"
+  },
+  licenseHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "flex-start",
+    gap: "20px",
+    marginBottom: "20px"
+  },
+  licenseSubtitle: {
+    color: "#94a3b8",
+    marginTop: "-10px",
+    maxWidth: "640px",
+    lineHeight: 1.5
+  },
+  verifiedBadge: {
+    background: "rgba(16, 185, 129, 0.18)",
+    color: "#34d399",
+    border: "1px solid rgba(16, 185, 129, 0.35)",
+    borderRadius: "999px",
+    padding: "8px 14px",
+    fontSize: "12px",
+    fontWeight: 700
+  },
+  pendingBadge: {
+    background: "rgba(245, 158, 11, 0.18)",
+    color: "#fbbf24",
+    border: "1px solid rgba(245, 158, 11, 0.35)",
+    borderRadius: "999px",
+    padding: "8px 14px",
+    fontSize: "12px",
+    fontWeight: 700
+  },
+  successBanner: {
+    background: "rgba(20, 83, 45, 0.25)",
+    color: "#bbf7d0",
+    border: "1px solid #14532d",
+    borderRadius: "14px",
+    padding: "12px 14px",
+    marginBottom: "18px"
+  },
+  errorBanner: {
+    background: "rgba(127, 29, 29, 0.25)",
+    color: "#fecaca",
+    border: "1px solid #7f1d1d",
+    borderRadius: "14px",
+    padding: "12px 14px",
+    marginBottom: "18px"
+  },
+  licenseActions: {
+    display: "flex",
+    gap: "12px",
+    marginTop: "18px",
+    marginBottom: "22px",
+    flexWrap: "wrap"
+  },
+  licenseDetailsPanel: {
+    background: "#111827",
+    border: "1px solid #1f2937",
+    borderRadius: "20px",
+    padding: "20px",
+    marginBottom: "18px"
+  },
+  licenseUploadGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "20px",
+    marginBottom: "24px"
+  },
+  uploadCard: {
+    background: "#111827",
+    border: "1px solid #1f2937",
+    borderRadius: "20px",
+    padding: "18px"
+  },
+  uploadHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
+    gap: "14px",
+    marginBottom: "14px"
+  },
+  uploadTitle: {
+    margin: 0,
+    fontSize: "17px",
+    fontWeight: 600
+  },
+  uploadButton: {
+    background: "#2563eb",
+    color: "#fff",
+    borderRadius: "12px",
+    padding: "10px 14px",
+    fontWeight: 600,
+    cursor: "pointer",
+    fontSize: "14px"
+  },
+  licensePreview: {
+    width: "100%",
+    height: "220px",
+    objectFit: "cover",
+    borderRadius: "16px",
+    border: "1px solid #334155",
+    background: "#0b1120"
+  },
+  emptyPreview: {
+    height: "220px",
+    borderRadius: "16px",
+    border: "1px dashed #334155",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    color: "#64748b",
+    background: "#0b1120"
+  },
+  verificationPanel: {
+    marginTop: "10px",
+    background: "#111827",
+    border: "1px solid #1f2937",
+    borderRadius: "20px",
+    padding: "20px"
+  },
+  verificationTitle: {
+    marginTop: 0,
+    marginBottom: "16px",
+    fontSize: "18px"
+  },
+  verificationGrid: {
+    display: "grid",
+    gridTemplateColumns: "1fr 1fr",
+    gap: "16px"
+  },
+  verificationMeta: {
+    marginTop: "18px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "8px"
+  },
+  verificationText: {
+    margin: 0,
+    color: "#cbd5e1"
   }
 };
