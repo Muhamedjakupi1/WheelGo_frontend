@@ -4,6 +4,7 @@ import { checkTenant } from "../../api/authApi";
 import { useAuth } from "../../context/AuthContext";
 
 const RESERVED_TENANTS = new Set(["super-admin-tenant"]);
+const AUTH_NOTICE_KEY = "wheelgo_auth_notice";
 
 export default function Login() {
   const { tenantSlug } = useParams();
@@ -24,6 +25,14 @@ export default function Login() {
       }
     }
   }, [tenantSlug, navigate]);
+
+  useEffect(() => {
+    const authNotice = sessionStorage.getItem(AUTH_NOTICE_KEY);
+    if (authNotice) {
+      setError(authNotice);
+      sessionStorage.removeItem(AUTH_NOTICE_KEY);
+    }
+  }, []);
 
   useEffect(() => {
     if (!tenantSlug) {
