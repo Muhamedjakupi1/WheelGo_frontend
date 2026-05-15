@@ -28,3 +28,11 @@ export const getAdminUsers = () => http.get("/api/v1/admin/users");
 export const updateAdminUser = (id, data) => http.patch(`/api/v1/admin/users/${id}`, data);
 export const getAdminTenantSettings = () => http.get("/api/v1/admin/tenant-settings");
 
+export const getAdminBookings = () => http.get("/api/v1/admin/bookings");
+export const confirmAdminBooking = (id, data) => http.patch(`/api/v1/admin/bookings/${id}/confirm`, data);
+export const rejectAdminBooking = (id, data = {}) => http.patch(`/api/v1/admin/bookings/${id}/reject`, data);
+
+export const getAdminAddons = () => http.get("/api/v1/admin/addons");
+export const ensureAdminDefaultAddons = () => http.post("/api/v1/admin/addons/ensure-defaults");
+export const updateAdminAddon = (id, data) => http.patch(`/api/v1/admin/addons/${id}`, data);
+

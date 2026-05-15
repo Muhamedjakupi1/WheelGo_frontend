@@ -18,6 +18,8 @@ import TenantAdminVehicles from "./pages/admin/TenantAdminVehicles";
 import TenantAdminVehicleCategories from "./pages/admin/TenantAdminVehicleCategories";
 import TenantAdminVehicleImages from "./pages/admin/TenantAdminVehicleImages";
 import TenantAdminUsers from "./pages/admin/TenantAdminUsers";
+import TenantAdminBookings from "./pages/admin/TenantAdminBookings";
+import TenantAdminAddons from "./pages/admin/TenantAdminAddons";
 
 export default function App() {
   return (
@@ -49,6 +51,8 @@ export default function App() {
         <Route path="vehicle-categories" element={<TenantAdminVehicleCategories />} />
         <Route path="vehicle-images" element={<TenantAdminVehicleImages />} />
         <Route path="users" element={<TenantAdminUsers />} />
+        <Route path="bookings" element={<TenantAdminBookings />} />
+        <Route path="addons" element={<TenantAdminAddons />} />
       </Route>
 
       <Route
