@@ -6,6 +6,13 @@ const http = axios.create({
 });
 
 const AUTH_NOTICE_KEY = "wheelgo_auth_notice";
+const SESSION_EXPIRY_MESSAGES = new Set([
+  "Invalid or expired token",
+  "Authenticated user no longer exists",
+  "Authenticated account is inactive",
+  "Token no longer matches the current account state",
+  "Your session expired after an account security change. Please log in again.",
+]);
 
 const redirectToLoginAfterSessionExpiry = () => {
   const tenantSlug = getTenantSlugBeforeLogout();
@@ -42,8 +49,13 @@ http.interceptors.response.use(
       const isAuthRequest =
         requestUrl.includes("/api/auth/login") ||
         requestUrl.includes("/api/auth/signup");
+      const responseMessage =
+        err.response?.data?.message ||
+        err.response?.data?.detail ||
+        (typeof err.response?.data === "string" ? err.response.data : "");
+      const shouldForceLogout = SESSION_EXPIRY_MESSAGES.has(responseMessage);
 
-      if (!isAuthRequest) {
+      if (!isAuthRequest && shouldForceLogout) {
         redirectToLoginAfterSessionExpiry();
       }
     }
