@@ -1,9 +1,21 @@
 import axios from "axios";
-import { getToken } from "../utils/auth";
+import { clearAuth, getTenantSlugBeforeLogout, getToken } from "../utils/auth";
 
 const http = axios.create({
   baseURL: import.meta.env.VITE_API_URL || "http://localhost:8080",
 });
+
+const AUTH_NOTICE_KEY = "wheelgo_auth_notice";
+
+const redirectToLoginAfterSessionExpiry = () => {
+  const tenantSlug = getTenantSlugBeforeLogout();
+  clearAuth();
+  sessionStorage.setItem(
+    AUTH_NOTICE_KEY,
+    "Your session expired after an account security change. Please log in again."
+  );
+  window.location.href = tenantSlug ? `/login/${tenantSlug}` : "/login";
+};
 
 const getTenantSlugFromPath = () => {
   const match = window.location.pathname.match(/^\/t\/([^/]+)/);
@@ -24,7 +36,20 @@ http.interceptors.request.use((config) => {
 
 http.interceptors.response.use(
   (res) => res,
-  (err) => Promise.reject(err)
+  (err) => {
+    if (err?.response?.status === 401) {
+      const requestUrl = err.config?.url || "";
+      const isAuthRequest =
+        requestUrl.includes("/api/auth/login") ||
+        requestUrl.includes("/api/auth/signup");
+
+      if (!isAuthRequest) {
+        redirectToLoginAfterSessionExpiry();
+      }
+    }
+
+    return Promise.reject(err);
+  }
 );
 
 export default http;
