@@ -20,8 +20,12 @@ export default function CreateAndEditModal({
     form,
     setForm,
     isEdit = false,
+    currencyOptions = [],
 }) {
     if (!open) return null;
+    const currencies = currencyOptions.length > 0
+        ? currencyOptions
+        : [{ code: "EUR", name: "Euro" }];
 
     const handleSlugChange = (e) => {
         setForm({ ...form, slug: slugify(e.target.value) });
@@ -98,8 +102,8 @@ export default function CreateAndEditModal({
                         </Field>
 
                         <Field label="Currency">
-                            <input
-                                style={s.input}
+                            <select
+                                style={s.select}
                                 value={form.settings.currency}
                                 onChange={(e) =>
                                     setForm({
@@ -107,9 +111,14 @@ export default function CreateAndEditModal({
                                         settings: { ...form.settings, currency: e.target.value },
                                     })
                                 }
-                                placeholder="EUR"
                                 required
-                            />
+                            >
+                                {currencies.map((currency) => (
+                                    <option key={currency.code} value={currency.code}>
+                                        {currency.code} - {currency.name}
+                                    </option>
+                                ))}
+                            </select>
                         </Field>
 
                         <Field label="Timezone">

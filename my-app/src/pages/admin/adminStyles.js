@@ -46,6 +46,7 @@ export const layout = {
     fontWeight: 800,
   },
   nav: { display: "flex", flexDirection: "column", gap: "8px", flex: 1 },
+  navCompact: { display: "flex", flexWrap: "wrap", gap: "8px", flex: 1 },
   contentStack: { display: "flex", flexDirection: "column", gap: "24px" },
 };
 
@@ -64,7 +65,7 @@ export const card = {
 export const grid = {
   two: {
     display: "grid",
-    gridTemplateColumns: "minmax(0, 1.5fr) minmax(320px, 0.9fr)",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))",
     gap: "24px",
     alignItems: "start",
   },
@@ -77,7 +78,7 @@ export const grid = {
 
 export const form = {
   stack: { display: "flex", flexDirection: "column", gap: "16px" },
-  row: { display: "grid", gridTemplateColumns: "repeat(2, minmax(0, 1fr))", gap: "14px" },
+  row: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: "14px" },
   field: { display: "flex", flexDirection: "column", gap: "8px" },
   label: { fontSize: "0.88rem", fontWeight: 600, color: palette.muted },
   input: {

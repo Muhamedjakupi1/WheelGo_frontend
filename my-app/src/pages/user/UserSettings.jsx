@@ -1,8 +1,10 @@
 import React, { useState } from "react";
 import { Lock, Bell, Shield } from "lucide-react";
 import { updateMySettingsPassword } from "../../api/userSettingsApi";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 
 export default function TenantUserSettings() {
+  const isCompact = useIsCompactLayout(760);
   const [form, setForm] = useState({
     currentPassword: "",
     newPassword: "",
@@ -62,14 +64,14 @@ export default function TenantUserSettings() {
   };
 
   return (
-    <div style={s.mainContent}>
-      <header style={s.header}>
+    <div style={{ ...s.mainContent, ...(isCompact ? s.mainContentCompact : {}) }}>
+      <header style={{ ...s.header, ...(isCompact ? s.headerCompact : {}) }}>
         <h1 style={s.title}>Settings</h1>
         <p style={s.subtitle}>Manage your account settings and preferences</p>
       </header>
 
-      <div style={s.wrapper}>
-        <section style={s.card}>
+      <div style={{ ...s.wrapper, ...(isCompact ? s.wrapperCompact : {}) }}>
+        <section style={{ ...s.card, ...(isCompact ? s.cardCompact : {}) }}>
           <div style={s.cardHeader}>
             <Lock size={22} color="#ef4444" />
             <h2 style={s.cardTitle}>Security</h2>
@@ -123,7 +125,7 @@ export default function TenantUserSettings() {
           </form>
         </section>
 
-        <section style={s.preferencesCard}>
+        <section style={{ ...s.preferencesCard, ...(isCompact ? s.cardCompact : {}) }}>
           <div style={s.cardHeader}>
             <Bell size={22} color="#f59e0b" />
             <h2 style={s.cardTitle}>Preferences & Notifications</h2>
@@ -165,12 +167,16 @@ const SettingsOption = ({ icon, title, desc, active }) => (
 
 const s = {
   mainContent: { width: "100%", color: "#fff" },
+  mainContentCompact: { paddingBottom: "24px" },
   header: { marginBottom: "40px" },
+  headerCompact: { marginBottom: "24px" },
   title: { fontSize: "32px", fontWeight: "700", margin: "0 0 10px 0" },
   subtitle: { color: "#94a3b8", fontSize: "16px" },
   wrapper: { display: "flex", flexDirection: "column", gap: "34px" },
+  wrapperCompact: { gap: "20px" },
   card: { background: "#0f172a", borderRadius: "24px", border: "1px solid #1e293b", padding: "30px" },
   preferencesCard: { background: "#0f172a", borderRadius: "24px", border: "1px solid #1e293b", padding: "30px", marginTop: "8px" },
+  cardCompact: { padding: "20px 16px" },
   cardHeader: { display: "flex", alignItems: "center", gap: "15px", marginBottom: "25px" },
   cardTitle: { fontSize: "20px", fontWeight: "600", margin: 0 },
   cardBody: { display: "flex", flexDirection: "column", gap: "20px" },
@@ -223,6 +229,8 @@ const s = {
     background: "#161f2e",
     borderRadius: "16px",
     border: "1px solid #2d3748",
+    gap: "12px",
+    flexWrap: "wrap",
   },
   optionInfo: { display: "flex", alignItems: "center", gap: "15px" },
   optionIcon: { color: "#94a3b8" },

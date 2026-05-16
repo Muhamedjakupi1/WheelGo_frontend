@@ -1,13 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
-import { Check, RefreshCw, X } from "lucide-react";
+import { RefreshCw, Trash2 } from "lucide-react";
 import {
-  confirmAdminBooking,
+  deleteAdminBooking,
   getAdminBookings,
-  rejectAdminBooking,
+  updateAdminBooking,
 } from "../../api/adminApi";
+import { useTenantSettings } from "../../context/TenantSettingsContext";
+import { formatCurrencyAmount } from "../../utils/currency";
+import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
 
+const BOOKING_STATUSES = ["PENDING", "CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED"];
+
 const initialDecision = {
+  startDate: "",
+  endDate: "",
+  status: "PENDING",
   addonName: "",
   addonCharge: "",
   note: "",
@@ -24,6 +32,11 @@ const formatDate = (value) => {
   });
 };
 
+const toDateInputValue = (value) => {
+  if (!value) return "";
+  return new Date(value).toISOString().split("T")[0];
+};
+
 const statusTone = (status) => {
   if (status === "CONFIRMED" || status === "ACTIVE" || status === "COMPLETED") return "success";
   if (status === "CANCELLED") return "danger";
@@ -31,11 +44,13 @@ const statusTone = (status) => {
 };
 
 export default function TenantAdminBookings() {
+  const { settings: tenantSettings } = useTenantSettings();
   const [bookings, setBookings] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [decision, setDecision] = useState(initialDecision);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteState, setDeleteState] = useState({ open: false, id: null, label: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
@@ -49,7 +64,7 @@ export default function TenantAdminBookings() {
       setLoading(true);
       setError("");
       const response = await getAdminBookings();
-      setBookings(response.data || []);
+      setBookings(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load bookings.");
     } finally {
@@ -62,60 +77,89 @@ export default function TenantAdminBookings() {
   }, []);
 
   useEffect(() => {
-    if (selectedBooking && selectedBooking.id !== selectedId) {
-      setSelectedId(selectedBooking.id);
-    }
-  }, [selectedBooking, selectedId]);
+    if (!selectedBooking) return;
+    setSelectedId(selectedBooking.id);
+    setDecision({
+      startDate: toDateInputValue(selectedBooking.startDate),
+      endDate: toDateInputValue(selectedBooking.endDate),
+      status: selectedBooking.status || "PENDING",
+      addonName: "",
+      addonCharge: "",
+      note: "",
+    });
+  }, [selectedBooking?.id]);
 
   const selectBooking = (booking) => {
     setSelectedId(booking.id);
-    setDecision(initialDecision);
     setMessage("");
     setError("");
   };
 
-  const buildDecisionPayload = () => ({
-    addonName: decision.addonName.trim() || null,
-    addonCharge: decision.addonCharge === "" ? 0 : Number(decision.addonCharge),
-    note: decision.note.trim() || null,
-  });
-
-  const handleConfirm = async () => {
+  const handleSave = async () => {
     if (!selectedBooking) return;
+
     try {
       setSaving(true);
       setError("");
       setMessage("");
-      await confirmAdminBooking(selectedBooking.id, buildDecisionPayload());
+
+      await updateAdminBooking(selectedBooking.id, {
+        startDate: decision.startDate || null,
+        endDate: decision.endDate || null,
+        status: decision.status,
+        addonName: decision.addonName.trim() || null,
+        addonCharge: decision.addonCharge === "" ? null : Number(decision.addonCharge),
+        note: decision.note.trim() || null,
+      });
+
       await loadBookings();
-      setDecision(initialDecision);
-      setMessage("Booking confirmed.");
+      setDecision((current) => ({
+        ...current,
+        addonName: "",
+        addonCharge: "",
+        note: "",
+      }));
+      setMessage("Booking updated.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to confirm booking.");
+      setError(err.response?.data?.message || "Failed to update booking.");
     } finally {
       setSaving(false);
     }
   };
 
-  const handleReject = async () => {
-    if (!selectedBooking) return;
+  const openDeleteModal = (booking) => {
+    setDeleteState({
+      open: true,
+      id: booking.id,
+      label: booking.vehicleName || "this booking",
+    });
+    setMessage("");
+    setError("");
+  };
+
+  const handleDelete = async () => {
+    if (!deleteState.id) return;
+
     try {
       setSaving(true);
       setError("");
       setMessage("");
-      await rejectAdminBooking(selectedBooking.id, { note: decision.note.trim() || null });
+      await deleteAdminBooking(deleteState.id);
       await loadBookings();
-      setDecision(initialDecision);
-      setMessage("Booking rejected.");
+      if (selectedId === deleteState.id) {
+        setSelectedId(null);
+        setDecision(initialDecision);
+      }
+      setDeleteState({ open: false, id: null, label: "" });
+      setMessage("Booking deleted.");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to reject booking.");
+      setError(err.response?.data?.message || "Failed to delete booking.");
     } finally {
       setSaving(false);
     }
   };
 
   const pendingCount = bookings.filter((booking) => booking.status === "PENDING").length;
-  const canDecide = selectedBooking?.status === "PENDING";
 
   return (
     <div style={layout.contentStack}>
@@ -123,7 +167,7 @@ export default function TenantAdminBookings() {
         <div style={{ display: "flex", justifyContent: "space-between", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
           <div>
             <h1 style={{ margin: 0, fontSize: "1.9rem", color: palette.text }}>Bookings</h1>
-            <p style={card.subtitle}>Review pending requests, approve custom charges, or reject bookings.</p>
+            <p style={card.subtitle}>Review requests, move booking dates, and set the status to any lifecycle state.</p>
           </div>
           <button type="button" onClick={loadBookings} style={{ ...button.secondary, display: "inline-flex", alignItems: "center", gap: "10px" }}>
             <RefreshCw size={16} />
@@ -170,7 +214,7 @@ export default function TenantAdminBookings() {
                       </td>
                       <td style={table.cell}>{booking.vehicleName || "Booked vehicle"}</td>
                       <td style={table.cell}>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</td>
-                      <td style={table.cell}>€{formatPrice(booking.totalPrice)}</td>
+                      <td style={table.cell}>{formatCurrencyAmount(booking.totalPrice, tenantSettings)}</td>
                       <td style={table.cell}>
                         <span style={badge(statusTone(booking.status))}>{booking.status}</span>
                       </td>
@@ -188,9 +232,9 @@ export default function TenantAdminBookings() {
         </article>
 
         <article style={card.panel}>
-          <h2 style={card.title}>Decision</h2>
+          <h2 style={card.title}>Booking Editor</h2>
           <p style={card.subtitle}>
-            {selectedBooking ? `${selectedBooking.vehicleName || "Booking"} for ${selectedBooking.customerEmail || "customer"}` : "Select a booking to review."}
+            {selectedBooking ? `${selectedBooking.vehicleName || "Booking"} for ${selectedBooking.customerEmail || "customer"}` : "Select a booking to edit."}
           </p>
 
           {error && <div style={{ ...badge("danger"), marginTop: "16px", justifyContent: "center" }}>{error}</div>}
@@ -200,9 +244,9 @@ export default function TenantAdminBookings() {
             <div style={{ ...form.stack, marginTop: "18px" }}>
               <div style={{ ...card.panel, boxShadow: "none", borderRadius: "14px", padding: "16px" }}>
                 <div style={{ display: "grid", gap: "10px", color: palette.muted, fontSize: "0.92rem" }}>
-                  <span>Base: €{formatPrice(selectedBooking.basePrice)}</span>
-                  <span>Add-ons: €{formatPrice(selectedBooking.addonPrice)}</span>
-                  <span>Total: €{formatPrice(selectedBooking.totalPrice)}</span>
+                  <span>Base: {formatCurrencyAmount(selectedBooking.basePrice, tenantSettings)}</span>
+                  <span>Add-ons: {formatCurrencyAmount(selectedBooking.addonPrice, tenantSettings)}</span>
+                  <span>Total: {formatCurrencyAmount(selectedBooking.totalPrice, tenantSettings)}</span>
                   <span>Included: {(selectedBooking.addonNames || []).join(", ") || "None"}</span>
                 </div>
                 {selectedBooking.specialRequest && (
@@ -210,29 +254,59 @@ export default function TenantAdminBookings() {
                 )}
               </div>
 
-              <div style={form.field}>
-                <label style={form.label}>Approved addon name</label>
-                <input
-                  style={form.input}
-                  value={decision.addonName}
-                  onChange={(event) => setDecision({ ...decision, addonName: event.target.value })}
-                  placeholder="Example: Airport pickup"
-                  disabled={!canDecide || saving}
-                />
+              <div style={form.row}>
+                <div style={form.field}>
+                  <label style={form.label}>Start date</label>
+                  <input
+                    style={form.input}
+                    type="date"
+                    value={decision.startDate}
+                    onChange={(event) => setDecision({ ...decision, startDate: event.target.value })}
+                  />
+                </div>
+                <div style={form.field}>
+                  <label style={form.label}>End date</label>
+                  <input
+                    style={form.input}
+                    type="date"
+                    min={decision.startDate || undefined}
+                    value={decision.endDate}
+                    onChange={(event) => setDecision({ ...decision, endDate: event.target.value })}
+                  />
+                </div>
               </div>
 
               <div style={form.field}>
-                <label style={form.label}>Charge</label>
-                <input
-                  style={form.input}
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={decision.addonCharge}
-                  onChange={(event) => setDecision({ ...decision, addonCharge: event.target.value })}
-                  placeholder="0.00"
-                  disabled={!canDecide || saving}
-                />
+                <label style={form.label}>Status</label>
+                <select style={form.input} value={decision.status} onChange={(event) => setDecision({ ...decision, status: event.target.value })}>
+                  {BOOKING_STATUSES.map((status) => (
+                    <option key={status} value={status}>{status}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={form.row}>
+                <div style={form.field}>
+                  <label style={form.label}>Approved custom add-on</label>
+                  <input
+                    style={form.input}
+                    value={decision.addonName}
+                    onChange={(event) => setDecision({ ...decision, addonName: event.target.value })}
+                    placeholder="Example: Airport pickup"
+                  />
+                </div>
+                <div style={form.field}>
+                  <label style={form.label}>Approved charge</label>
+                  <input
+                    style={form.input}
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={decision.addonCharge}
+                    onChange={(event) => setDecision({ ...decision, addonCharge: event.target.value })}
+                    placeholder="0.00"
+                  />
+                </div>
               </div>
 
               <div style={form.field}>
@@ -241,28 +315,42 @@ export default function TenantAdminBookings() {
                   style={form.textarea}
                   value={decision.note}
                   onChange={(event) => setDecision({ ...decision, note: event.target.value })}
-                  disabled={!canDecide || saving}
+                  placeholder="Optional note to append to the booking."
                 />
               </div>
 
               <div style={form.actions}>
                 <button
                   type="button"
-                  style={{ ...button.primary, display: "inline-flex", alignItems: "center", gap: "8px" }}
-                  onClick={handleConfirm}
-                  disabled={!canDecide || saving}
+                  style={button.primary}
+                  onClick={handleSave}
+                  disabled={saving}
                 >
-                  <Check size={16} />
-                  Confirm
+                  {saving ? "Saving..." : "Save Changes"}
+                </button>
+                <button
+                  type="button"
+                  style={button.secondary}
+                  onClick={() => setDecision({
+                    startDate: toDateInputValue(selectedBooking.startDate),
+                    endDate: toDateInputValue(selectedBooking.endDate),
+                    status: selectedBooking.status || "PENDING",
+                    addonName: "",
+                    addonCharge: "",
+                    note: "",
+                  })}
+                  disabled={saving}
+                >
+                  Reset
                 </button>
                 <button
                   type="button"
                   style={{ ...button.danger, display: "inline-flex", alignItems: "center", gap: "8px" }}
-                  onClick={handleReject}
-                  disabled={!canDecide || saving}
+                  onClick={() => openDeleteModal(selectedBooking)}
+                  disabled={saving}
                 >
-                  <X size={16} />
-                  Reject
+                  <Trash2 size={16} />
+                  Delete
                 </button>
               </div>
             </div>
@@ -271,6 +359,17 @@ export default function TenantAdminBookings() {
           )}
         </article>
       </section>
+
+      <AdminConfirmModal
+        open={deleteState.open}
+        title="Delete this booking?"
+        description={`This will permanently remove the booking for ${deleteState.label}.`}
+        error={error}
+        confirmLabel="Delete booking"
+        loading={saving}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteState({ open: false, id: null, label: "" })}
+      />
     </div>
   );
 }

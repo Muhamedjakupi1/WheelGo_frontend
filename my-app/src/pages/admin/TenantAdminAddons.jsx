@@ -1,10 +1,15 @@
 import { useEffect, useMemo, useState } from "react";
-import { RefreshCw } from "lucide-react";
+import { Plus, RefreshCw, Trash2 } from "lucide-react";
 import {
+  createAdminAddon,
+  deleteAdminAddon,
   ensureAdminDefaultAddons,
   getAdminAddons,
   updateAdminAddon,
 } from "../../api/adminApi";
+import { useTenantSettings } from "../../context/TenantSettingsContext";
+import { formatCurrencyAmount } from "../../utils/currency";
+import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
 
 const defaultForm = {
@@ -12,31 +17,34 @@ const defaultForm = {
   description: "",
   price: "",
   quantity: "",
+  type: "ONE_TIME",
   isActive: true,
 };
 
-const managedNames = new Set(["baby seat", "bluetooth"]);
-
 export default function TenantAdminAddons() {
+  const { settings: tenantSettings } = useTenantSettings();
   const [addons, setAddons] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [formData, setFormData] = useState(defaultForm);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteState, setDeleteState] = useState({ open: false, id: null, label: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
   const selectedAddon = useMemo(
-    () => addons.find((addon) => addon.id === selectedId) || addons.find((addon) => managedNames.has((addon.name || "").toLowerCase())) || addons[0],
+    () => addons.find((addon) => addon.id === selectedId) || null,
     [addons, selectedId]
   );
+
+  const isEditing = Boolean(selectedAddon);
 
   const loadAddons = async () => {
     try {
       setLoading(true);
       setError("");
       const response = await getAdminAddons();
-      setAddons(response.data || []);
+      setAddons(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load add-ons.");
     } finally {
@@ -48,17 +56,11 @@ export default function TenantAdminAddons() {
     loadAddons();
   }, []);
 
-  useEffect(() => {
-    if (!selectedAddon) return;
-    setSelectedId(selectedAddon.id);
-    setFormData({
-      name: selectedAddon.name || "",
-      description: selectedAddon.description || "",
-      price: selectedAddon.price ?? "",
-      quantity: selectedAddon.quantity ?? 0,
-      isActive: selectedAddon.isActive ?? true,
-    });
-  }, [selectedAddon?.id]);
+  const resetForm = () => {
+    setSelectedId(null);
+    setFormData(defaultForm);
+    setError("");
+  };
 
   const handleEnsureDefaults = async () => {
     try {
@@ -66,7 +68,7 @@ export default function TenantAdminAddons() {
       setError("");
       setSuccess("");
       const response = await ensureAdminDefaultAddons();
-      setAddons(response.data || []);
+      setAddons(Array.isArray(response.data) ? response.data : []);
       setSuccess("Default add-ons are ready.");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to create default add-ons.");
@@ -82,6 +84,7 @@ export default function TenantAdminAddons() {
       description: addon.description || "",
       price: addon.price ?? "",
       quantity: addon.quantity ?? 0,
+      type: addon.type || "ONE_TIME",
       isActive: addon.isActive ?? true,
     });
     setError("");
@@ -90,24 +93,64 @@ export default function TenantAdminAddons() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
-    if (!selectedId) return;
 
     try {
       setSaving(true);
       setError("");
       setSuccess("");
-      await updateAdminAddon(selectedId, {
+
+      const payload = {
         name: formData.name.trim(),
         description: formData.description.trim() || null,
         price: Number(formData.price || 0),
         quantity: Number(formData.quantity || 0),
-        type: "ONE_TIME",
+        type: formData.type,
         isActive: formData.isActive,
-      });
+      };
+
+      if (isEditing) {
+        await updateAdminAddon(selectedId, payload);
+      } else {
+        await createAdminAddon(payload);
+      }
+
       await loadAddons();
-      setSuccess("Add-on updated.");
+      setSuccess(isEditing ? "Add-on updated." : "Add-on created.");
+      if (!isEditing) {
+        resetForm();
+      }
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to update add-on.");
+      setError(err.response?.data?.message || `Failed to ${isEditing ? "update" : "create"} add-on.`);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const openDeleteModal = (addon) => {
+    setDeleteState({
+      open: true,
+      id: addon.id,
+      label: addon.name || "this add-on",
+    });
+    setError("");
+    setSuccess("");
+  };
+
+  const handleDelete = async () => {
+    if (!deleteState.id) return;
+
+    try {
+      setSaving(true);
+      setError("");
+      await deleteAdminAddon(deleteState.id);
+      await loadAddons();
+      if (selectedId === deleteState.id) {
+        resetForm();
+      }
+      setSuccess("Add-on deleted.");
+      setDeleteState({ open: false, id: null, label: "" });
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete add-on.");
     } finally {
       setSaving(false);
     }
@@ -119,12 +162,18 @@ export default function TenantAdminAddons() {
         <div style={{ display: "flex", justifyContent: "space-between", gap: "18px", alignItems: "center", flexWrap: "wrap" }}>
           <div>
             <h1 style={{ margin: 0, fontSize: "1.9rem", color: palette.text }}>Add-ons</h1>
-            <p style={card.subtitle}>Set prices and available stock for Baby Seat and Bluetooth inventory.</p>
+            <p style={card.subtitle}>Create, edit, activate, and delete add-ons without being limited to the default inventory set.</p>
           </div>
-          <button type="button" onClick={handleEnsureDefaults} style={{ ...button.secondary, display: "inline-flex", alignItems: "center", gap: "10px" }} disabled={saving}>
-            <RefreshCw size={16} />
-            Ensure defaults
-          </button>
+          <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
+            <button type="button" onClick={handleEnsureDefaults} style={{ ...button.secondary, display: "inline-flex", alignItems: "center", gap: "10px" }} disabled={saving}>
+              <RefreshCw size={16} />
+              Ensure defaults
+            </button>
+            <button type="button" onClick={resetForm} style={{ ...button.primary, display: "inline-flex", alignItems: "center", gap: "10px" }}>
+              <Plus size={16} />
+              New add-on
+            </button>
+          </div>
         </div>
       </section>
 
@@ -148,6 +197,7 @@ export default function TenantAdminAddons() {
                 <thead>
                   <tr>
                     <th style={table.headCell}>Name</th>
+                    <th style={table.headCell}>Type</th>
                     <th style={table.headCell}>Stock</th>
                     <th style={table.headCell}>Price</th>
                     <th style={table.headCell}>Status</th>
@@ -163,17 +213,23 @@ export default function TenantAdminAddons() {
                           {addon.description || "No description"}
                         </div>
                       </td>
+                      <td style={table.cell}>{addon.type || "ONE_TIME"}</td>
                       <td style={table.cell}>{addon.quantity ?? 0}</td>
-                      <td style={table.cell}>€{Number(addon.price || 0).toFixed(2)}</td>
+                      <td style={table.cell}>{formatCurrencyAmount(addon.price, tenantSettings)}</td>
                       <td style={table.cell}>
                         <span style={badge(addon.isActive ? "success" : "danger")}>
                           {addon.isActive ? "Active" : "Inactive"}
                         </span>
                       </td>
                       <td style={table.cell}>
-                        <button type="button" style={button.ghost} onClick={() => handleSelect(addon)}>
-                          Edit
-                        </button>
+                        <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                          <button type="button" style={button.ghost} onClick={() => handleSelect(addon)}>
+                            Edit
+                          </button>
+                          <button type="button" style={button.danger} onClick={() => openDeleteModal(addon)}>
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -184,51 +240,79 @@ export default function TenantAdminAddons() {
         </article>
 
         <article style={card.panel}>
-          <h2 style={card.title}>Edit Add-on</h2>
-          <p style={card.subtitle}>Quantity is reduced when a booking is saved and restored when it finishes or is rejected.</p>
+          <h2 style={card.title}>{isEditing ? "Edit Add-on" : "Create Add-on"}</h2>
+          <p style={card.subtitle}>
+            {isEditing
+              ? "Update pricing, stock, status, or description for the selected add-on."
+              : "Create a new add-on that admins can attach to future bookings."}
+          </p>
 
           {error && <div style={{ ...badge("danger"), marginTop: "16px", justifyContent: "center" }}>{error}</div>}
           {success && <div style={{ ...badge("success"), marginTop: "16px", justifyContent: "center" }}>{success}</div>}
 
-          {selectedAddon ? (
-            <form onSubmit={handleSubmit} style={{ ...form.stack, marginTop: "18px" }}>
+          <form onSubmit={handleSubmit} style={{ ...form.stack, marginTop: "18px" }}>
+            <div style={form.field}>
+              <label style={form.label}>Name</label>
+              <input style={form.input} value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} required />
+            </div>
+
+            <div style={form.field}>
+              <label style={form.label}>Description</label>
+              <textarea style={form.textarea} value={formData.description} onChange={(event) => setFormData({ ...formData, description: event.target.value })} />
+            </div>
+
+            <div style={form.row}>
               <div style={form.field}>
-                <label style={form.label}>Name</label>
-                <input style={form.input} value={formData.name} onChange={(event) => setFormData({ ...formData, name: event.target.value })} required />
+                <label style={form.label}>Price</label>
+                <input style={form.input} type="number" min="0" step="0.01" value={formData.price} onChange={(event) => setFormData({ ...formData, price: event.target.value })} required />
               </div>
-
               <div style={form.field}>
-                <label style={form.label}>Description</label>
-                <textarea style={form.textarea} value={formData.description} onChange={(event) => setFormData({ ...formData, description: event.target.value })} />
+                <label style={form.label}>Available quantity</label>
+                <input style={form.input} type="number" min="0" step="1" value={formData.quantity} onChange={(event) => setFormData({ ...formData, quantity: event.target.value })} required />
               </div>
+            </div>
 
-              <div style={form.row}>
-                <div style={form.field}>
-                  <label style={form.label}>Price</label>
-                  <input style={form.input} type="number" min="0" step="0.01" value={formData.price} onChange={(event) => setFormData({ ...formData, price: event.target.value })} required />
-                </div>
-                <div style={form.field}>
-                  <label style={form.label}>Available quantity</label>
-                  <input style={form.input} type="number" min="0" step="1" value={formData.quantity} onChange={(event) => setFormData({ ...formData, quantity: event.target.value })} required />
-                </div>
-              </div>
+            <div style={form.field}>
+              <label style={form.label}>Type</label>
+              <select style={form.input} value={formData.type} onChange={(event) => setFormData({ ...formData, type: event.target.value })}>
+                <option value="ONE_TIME">ONE_TIME</option>
+                <option value="DAILY">DAILY</option>
+              </select>
+            </div>
 
-              <label style={{ ...form.label, display: "flex", alignItems: "center", gap: "10px", color: palette.text }}>
-                <input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData({ ...formData, isActive: event.target.checked })} />
-                Add-on is active
-              </label>
+            <label style={{ ...form.label, display: "flex", alignItems: "center", gap: "10px", color: palette.text }}>
+              <input type="checkbox" checked={formData.isActive} onChange={(event) => setFormData({ ...formData, isActive: event.target.checked })} />
+              Add-on is active
+            </label>
 
-              <div style={form.actions}>
-                <button type="submit" style={button.primary} disabled={saving}>
-                  {saving ? "Saving..." : "Save Add-on"}
+            <div style={form.actions}>
+              <button type="submit" style={button.primary} disabled={saving}>
+                {saving ? "Saving..." : isEditing ? "Save Add-on" : "Create Add-on"}
+              </button>
+              <button type="button" style={button.secondary} onClick={resetForm} disabled={saving}>
+                Reset
+              </button>
+              {isEditing ? (
+                <button type="button" style={{ ...button.danger, display: "inline-flex", alignItems: "center", gap: "8px" }} onClick={() => openDeleteModal(selectedAddon)} disabled={saving}>
+                  <Trash2 size={16} />
+                  Delete
                 </button>
-              </div>
-            </form>
-          ) : (
-            <div style={{ ...emptyState, marginTop: "18px" }}>Select an add-on.</div>
-          )}
+              ) : null}
+            </div>
+          </form>
         </article>
       </section>
+
+      <AdminConfirmModal
+        open={deleteState.open}
+        title="Delete this add-on?"
+        description={`This will permanently remove ${deleteState.label}. Existing booking snapshots will stay intact, but the add-on will no longer be available.`}
+        error={error}
+        confirmLabel="Delete add-on"
+        loading={saving}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteState({ open: false, id: null, label: "" })}
+      />
     </div>
   );
 }
