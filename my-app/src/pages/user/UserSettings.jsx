@@ -2,6 +2,10 @@ import React, { useState } from "react";
 import { Lock, Bell, Shield } from "lucide-react";
 import { updateMySettingsPassword } from "../../api/userSettingsApi";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
+import {
+  isValidPassword,
+  PASSWORD_RULE_MESSAGE,
+} from "../../utils/passwordValidation";
 
 export default function TenantUserSettings() {
   const isCompact = useIsCompactLayout(760);
@@ -33,6 +37,11 @@ export default function TenantUserSettings() {
 
     if (form.newPassword !== form.confirmPassword) {
       setMessage({ type: "error", text: "New password and confirm password do not match." });
+      return;
+    }
+
+    if (!isValidPassword(form.newPassword)) {
+      setMessage({ type: "error", text: PASSWORD_RULE_MESSAGE });
       return;
     }
 

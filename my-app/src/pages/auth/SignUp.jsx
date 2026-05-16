@@ -2,6 +2,10 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams, Link } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { checkTenant } from "../../api/authApi";
+import {
+  isValidPassword,
+  PASSWORD_RULE_MESSAGE,
+} from "../../utils/passwordValidation";
 
 const RESERVED_SIGNUP_TENANTS = new Set(["super-admin-tenant"]);
 
@@ -23,7 +27,6 @@ export default function SignUp() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,}$/;
 
   useEffect(() => {
     if (tenantSlug && RESERVED_SIGNUP_TENANTS.has(tenantSlug.toLowerCase())) {
@@ -83,8 +86,8 @@ export default function SignUp() {
       setError("Invalid email format");
       return;
     }
-    if (!passwordRegex.test(form.password)) {
-      setError("Password must be at least 8 chars, include 1 uppercase and 1 number");
+    if (!isValidPassword(form.password)) {
+      setError(PASSWORD_RULE_MESSAGE);
       return;
     }
     if (form.password !== form.confirm) {
