@@ -21,6 +21,11 @@ const defaultForm = {
 
 const LOCATION_IN_USE_MESSAGE =
   "Vehicles are assigned to this location. Reassign or delete those vehicles first.";
+const LOCATION_DELETE_AUTH_FALLBACK_MESSAGES = new Set([
+  "Full authentication is required to access this resource",
+  "Forbidden",
+  "Unauthorized",
+]);
 
 export default function TenantAdminLocations() {
   const [locations, setLocations] = useState([]);
@@ -153,7 +158,7 @@ export default function TenantAdminLocations() {
         LOCATION_IN_USE_MESSAGE;
 
       const normalizedMessage =
-        rawMessage === "Full authentication is required to access this resource"
+        LOCATION_DELETE_AUTH_FALLBACK_MESSAGES.has(rawMessage)
           ? LOCATION_IN_USE_MESSAGE
           : rawMessage;
 

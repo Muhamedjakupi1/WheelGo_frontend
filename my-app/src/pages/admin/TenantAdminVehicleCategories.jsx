@@ -11,6 +11,11 @@ import { badge, button, card, emptyState, form, grid, layout, palette, table } f
 const defaultForm = { name: "", description: "" };
 const CATEGORY_IN_USE_MESSAGE =
   "A vehicle is attached to this category. Delete or reassign those vehicles first.";
+const CATEGORY_DELETE_AUTH_FALLBACK_MESSAGES = new Set([
+  "Full authentication is required to access this resource",
+  "Forbidden",
+  "Unauthorized",
+]);
 
 export default function TenantAdminVehicleCategories() {
   const [categories, setCategories] = useState([]);
@@ -116,7 +121,7 @@ export default function TenantAdminVehicleCategories() {
         "Failed to delete category.";
 
       const normalizedMessage =
-        rawMessage === "Full authentication is required to access this resource"
+        CATEGORY_DELETE_AUTH_FALLBACK_MESSAGES.has(rawMessage)
           ? CATEGORY_IN_USE_MESSAGE
           : rawMessage;
 
