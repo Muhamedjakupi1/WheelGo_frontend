@@ -20,6 +20,7 @@ import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { createBooking } from "../../api/bookingApi";
 import { getAddons } from "../../api/addonApi";
 import { getVehicles } from "../../api/vehicleApi";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount, formatCurrencyPerDay } from "../../utils/currency";
 import { resolveMediaUrl } from "../../utils/media";
 
@@ -32,6 +33,8 @@ export default function TenantUserDashboard() {
   const { settings: tenantSettings } = useTenantSettings();
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
+  const isCompactBooking = useIsCompactLayout(1100);
+  const isWideBooking = useIsCompactLayout(1450);
   const [vehicles, setVehicles] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -117,6 +120,16 @@ export default function TenantUserDashboard() {
     heroVehicle,
     selectedLocation
   );
+  const bookingModalGrid = isCompactBooking
+    ? ds.modalContent
+    : {
+        display: "grid",
+        gridTemplateColumns: isWideBooking
+          ? "minmax(0, 1.7fr) minmax(340px, 0.85fr)"
+          : "minmax(0, 1.45fr) minmax(320px, 0.95fr)",
+        gap: "24px",
+        alignItems: "start",
+      };
 
   return (
     <div style={ds.container}>
@@ -509,7 +522,7 @@ function VehicleDetailsModal({
           </button>
         </div>
 
-        <div style={ds.modalContent}>
+        <div style={bookingModalGrid}>
           <div style={ds.galleryWrap}>
             <div style={ds.modalImageFrame}>
               <img src={imageUrl} alt={name} style={ds.modalImage} />

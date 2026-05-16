@@ -5,8 +5,9 @@ import {
   getAdminLocations,
   updateAdminLocation,
 } from "../../api/adminApi";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import AdminConfirmModal from "./AdminConfirmModal";
-import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
+import { badge, button, card, emptyState, form, layout, palette, table, getReadHeavyTwoColumnLayout } from "./adminStyles";
 
 const defaultForm = {
   name: "",
@@ -28,6 +29,8 @@ const LOCATION_DELETE_AUTH_FALLBACK_MESSAGES = new Set([
 ]);
 
 export default function TenantAdminLocations() {
+  const isCompact = useIsCompactLayout(1100);
+  const isWide = useIsCompactLayout(1500);
   const [locations, setLocations] = useState([]);
   const [formData, setFormData] = useState(defaultForm);
   const [selectedId, setSelectedId] = useState(null);
@@ -40,6 +43,7 @@ export default function TenantAdminLocations() {
   const [confirmError, setConfirmError] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
+  const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
   const loadData = async () => {
     try {
@@ -175,7 +179,7 @@ export default function TenantAdminLocations() {
         <p style={card.subtitle}>Create locations first, then assign vehicles to them.</p>
       </section>
 
-      <section style={grid.two}>
+      <section style={workspaceGrid}>
         <article style={card.panel}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
             <div>

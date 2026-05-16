@@ -8,9 +8,10 @@ import {
   updateAdminAddon,
 } from "../../api/adminApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount } from "../../utils/currency";
 import AdminConfirmModal from "./AdminConfirmModal";
-import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
+import { badge, button, card, emptyState, form, layout, palette, table, getReadHeavyTwoColumnLayout } from "./adminStyles";
 
 const defaultForm = {
   name: "",
@@ -23,6 +24,8 @@ const defaultForm = {
 
 export default function TenantAdminAddons() {
   const { settings: tenantSettings } = useTenantSettings();
+  const isCompact = useIsCompactLayout(1100);
+  const isWide = useIsCompactLayout(1500);
   const [addons, setAddons] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [formData, setFormData] = useState(defaultForm);
@@ -31,6 +34,7 @@ export default function TenantAdminAddons() {
   const [deleteState, setDeleteState] = useState({ open: false, id: null, label: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
   const selectedAddon = useMemo(
     () => addons.find((addon) => addon.id === selectedId) || null,
@@ -177,7 +181,7 @@ export default function TenantAdminAddons() {
         </div>
       </section>
 
-      <section style={grid.two}>
+      <section style={workspaceGrid}>
         <article style={card.panel}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
             <div>

@@ -2,13 +2,16 @@ import { useEffect, useMemo, useState } from "react";
 import { Trash2 } from "lucide-react";
 import { deleteAdminUser, getAdminUsers, updateAdminUser } from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import AdminConfirmModal from "./AdminConfirmModal";
-import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
+import { badge, button, card, emptyState, form, layout, palette, table, getReadHeavyTwoColumnLayout } from "./adminStyles";
 
 const defaultForm = { email: "", password: "", role: "USER", isActive: true };
 
 export default function TenantAdminUsers() {
   const { user: currentUser } = useAuth();
+  const isCompact = useIsCompactLayout(1100);
+  const isWide = useIsCompactLayout(1500);
   const [users, setUsers] = useState([]);
   const [formData, setFormData] = useState(defaultForm);
   const [selectedId, setSelectedId] = useState(null);
@@ -17,6 +20,7 @@ export default function TenantAdminUsers() {
   const [deleteState, setDeleteState] = useState({ open: false, id: null, label: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
   const roleOptions = useMemo(
     () => (currentUser?.role === "SUPER_ADMIN" ? ["USER", "ADMIN", "SUPER_ADMIN"] : ["USER", "ADMIN"]),
@@ -134,7 +138,7 @@ export default function TenantAdminUsers() {
         <p style={card.subtitle}>Review user accounts, update access, and delete accounts that should no longer exist.</p>
       </section>
 
-      <section style={grid.two}>
+      <section style={workspaceGrid}>
         <article style={card.panel}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
             <div>

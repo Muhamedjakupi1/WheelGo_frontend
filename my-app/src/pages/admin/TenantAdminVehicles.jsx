@@ -8,10 +8,11 @@ import {
   updateAdminVehicle,
 } from "../../api/adminApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount } from "../../utils/currency";
 import { resolveMediaUrl } from "../../utils/media";
 import AdminConfirmModal from "./AdminConfirmModal";
-import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
+import { badge, button, card, emptyState, form, layout, palette, table, getReadHeavyTwoColumnLayout } from "./adminStyles";
 
 const defaultForm = {
   categoryId: "",
@@ -51,6 +52,8 @@ const vehicleThumbPlaceholder = {
 
 export default function TenantAdminVehicles() {
   const { settings: tenantSettings } = useTenantSettings();
+  const isCompact = useIsCompactLayout(1100);
+  const isWide = useIsCompactLayout(1500);
   const [vehicles, setVehicles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -65,6 +68,7 @@ export default function TenantAdminVehicles() {
   const [confirmError, setConfirmError] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
+  const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
   const loadData = async () => {
     try {
@@ -206,7 +210,7 @@ export default function TenantAdminVehicles() {
         <p style={card.subtitle}>Create, edit, and remove vehicles for this tenant.</p>
       </section>
 
-      <section style={grid.two}>
+      <section style={workspaceGrid}>
         <article style={card.panel}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
             <div>
