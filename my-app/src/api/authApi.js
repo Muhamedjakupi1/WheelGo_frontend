@@ -7,8 +7,8 @@ const pub = axios.create({
 export const login = (tenantSlug, email, password) =>
   pub.post(`/api/auth/login/${tenantSlug}`, { email, password });
 
-export const signupTenant = (tenantSlug, email, password) =>
-  pub.post(`/api/auth/signup/${tenantSlug}`, { email, password });
+export const signupTenant = (tenantSlug, data) =>
+  pub.post(`/api/auth/signup/${tenantSlug}`, data);
 
 export const checkTenant = (tenantSlug) =>
   pub.get(`/api/public/tenants/${tenantSlug}`);

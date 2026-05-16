@@ -12,7 +12,14 @@ export default function SignUp() {
   const [tenant, setTenant] = useState(null);
   const [notFound, setNotFound] = useState(false);
   const [unauthorized, setUnauthorized] = useState(false);
-  const [form, setForm] = useState({ email: "", password: "", confirm: "" });
+  const [form, setForm] = useState({
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    password: "",
+    confirm: "",
+  });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -68,6 +75,9 @@ export default function SignUp() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+    if (!form.firstName.trim()) { setError("First name is required"); return; }
+    if (!form.lastName.trim()) { setError("Last name is required"); return; }
+    if (!form.phone.trim()) { setError("Phone number is required"); return; }
     if (form.password !== form.confirm) { setError("Passwords do not match"); return; }
     if (!emailRegex.test(form.email)) {
       setError("Invalid email format");
@@ -86,7 +96,13 @@ export default function SignUp() {
       if (RESERVED_SIGNUP_TENANTS.has(tenantSlug.toLowerCase())) {
         throw new Error("Forbidden access.");
       }
-      await signup(tenantSlug, form.email, form.password);
+      await signup(tenantSlug, {
+        firstName: form.firstName.trim(),
+        lastName: form.lastName.trim(),
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        password: form.password,
+      });
       navigate(`/t/${tenantSlug}/app`);
     } catch (err) {
       setError(err.response?.data?.message || err.response?.data || "Signup failed");
@@ -105,10 +121,29 @@ export default function SignUp() {
         <h2 style={s.title}>{tenant.name}</h2>
         <p style={s.sub}>Create Account</p>
         <form onSubmit={handleSubmit} style={s.form}>
-          <div style={s.field}>
-            <label style={s.label}>Email</label>
-            <input style={s.input} type="email" placeholder="you@example.com"
-              value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+          <div style={s.nameRow}>
+            <div style={s.field}>
+              <label style={s.label}>First Name</label>
+              <input style={s.input} type="text" placeholder="John"
+                value={form.firstName} onChange={e => setForm({ ...form, firstName: e.target.value })} required />
+            </div>
+            <div style={s.field}>
+              <label style={s.label}>Last Name</label>
+              <input style={s.input} type="text" placeholder="Smith"
+                value={form.lastName} onChange={e => setForm({ ...form, lastName: e.target.value })} required />
+            </div>
+          </div>
+          <div style={s.nameRow}>
+            <div style={s.field}>
+              <label style={s.label}>Phone Number</label>
+              <input style={s.input} type="tel" placeholder="+383 44 123 123"
+                value={form.phone} onChange={e => setForm({ ...form, phone: e.target.value })} required />
+            </div>
+            <div style={s.field}>
+              <label style={s.label}>Email</label>
+              <input style={s.input} type="email" placeholder="you@example.com"
+                value={form.email} onChange={e => setForm({ ...form, email: e.target.value })} required />
+            </div>
           </div>
           <div style={s.field}>
             <label style={s.label}>Password</label>
@@ -135,7 +170,7 @@ export default function SignUp() {
 
 const s = {
   page:   { minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", background:"#0a0a0f" },
-  card:   { background:"#0d0d14", border:"1px solid #2a2a2a", borderRadius:16, padding:"48px 40px", width:"100%", maxWidth:420 },
+  card:   { background:"#0d0d14", border:"1px solid #2a2a2a", borderRadius:16, padding:"48px 40px", width:"100%", maxWidth:500 },
   header: {display: "flex", alignItems: "center", justifyContent: "center", gap: "12px", marginBottom: "32px" },
   logo:   { fontSize:28, fontWeight:700, color:"#2563eb",  },
   logoBox: {
@@ -154,6 +189,7 @@ const s = {
   title:  { fontSize:24, fontWeight:700, color:"#fff", margin:"0 0 8px" },
   sub:    { fontSize:14, color:"#888", margin:"0 0 32px" },
   form:   { display:"flex", flexDirection:"column", gap:20 },
+  nameRow:{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 },
   field:  { display:"flex", flexDirection:"column", gap:8 },
   label:  { fontSize:13, fontWeight:500, color:"#ccc" },
   input:  { padding:"12px 16px", borderRadius:8, border:"1px solid #333", background:"#111", color:"#fff", fontSize:14, outline:"none" },
