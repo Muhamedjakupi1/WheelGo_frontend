@@ -3,6 +3,7 @@ import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
 import { CalendarCheck, CarFront, Image, LayoutGrid, LogOut, MapPin, Package, Tags, Users } from "lucide-react";
 import { getAdminTenantSettings } from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { button, layout, palette } from "./adminStyles";
 
 const items = [
@@ -21,6 +22,7 @@ export default function AdminLayout() {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [themeColor, setThemeColor] = useState(null);
+  const isCompact = useIsCompactLayout(1100);
 
   useEffect(() => {
     let active = true;
@@ -51,8 +53,22 @@ export default function AdminLayout() {
   const mainStyle = themeColor ? { ...layout.main, background: themeColor } : layout.main;
 
   return (
-    <div style={shellStyle}>
-      <aside style={layout.sidebar}>
+    <div style={{ ...shellStyle, ...(isCompact ? { display: "block" } : {}) }}>
+      <aside
+        style={{
+          ...layout.sidebar,
+          ...(isCompact
+            ? {
+                position: "static",
+                width: "100%",
+                inset: "auto",
+                borderRight: "none",
+                borderBottom: `1px solid ${palette.border}`,
+                padding: "18px 16px",
+              }
+            : {}),
+        }}
+      >
         <div style={layout.brand}>
           <div style={layout.brandMark}>WG</div>
           <div>
@@ -65,7 +81,7 @@ export default function AdminLayout() {
           Signed in as <span style={{ color: palette.text, fontWeight: 600 }}>{user?.email}</span>
         </div>
 
-        <nav style={layout.nav}>
+        <nav style={isCompact ? layout.navCompact : layout.nav}>
           {items.map((item) => {
             const Icon = item.icon;
             return (
@@ -100,7 +116,18 @@ export default function AdminLayout() {
         </button>
       </aside>
 
-      <main style={mainStyle}>
+      <main
+        style={{
+          ...mainStyle,
+          ...(isCompact
+            ? {
+                marginLeft: 0,
+                width: "100%",
+                padding: "20px 16px 28px",
+              }
+            : {}),
+        }}
+      >
         <Outlet />
       </main>
     </div>

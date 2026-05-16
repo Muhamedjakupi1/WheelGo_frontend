@@ -7,6 +7,8 @@ import {
   getAdminVehicles,
   updateAdminVehicle,
 } from "../../api/adminApi";
+import { useTenantSettings } from "../../context/TenantSettingsContext";
+import { formatCurrencyAmount } from "../../utils/currency";
 import { resolveMediaUrl } from "../../utils/media";
 import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
@@ -48,6 +50,7 @@ const vehicleThumbPlaceholder = {
 };
 
 export default function TenantAdminVehicles() {
+  const { settings: tenantSettings } = useTenantSettings();
   const [vehicles, setVehicles] = useState([]);
   const [categories, setCategories] = useState([]);
   const [locations, setLocations] = useState([]);
@@ -268,7 +271,7 @@ export default function TenantAdminVehicles() {
                         </td>
                         <td style={table.cell}>{vehicle.categoryName || "-"}</td>
                         <td style={table.cell}>{vehicle.locationName || "-"}</td>
-                        <td style={table.cell}>€{vehicle.dailyRate}</td>
+                        <td style={table.cell}>{formatCurrencyAmount(vehicle.dailyRate, tenantSettings)}</td>
                         <td style={{ ...table.cell, verticalAlign: "middle" }}>
                           <span style={badge(vehicle.status === "AVAILABLE" ? "success" : vehicle.status === "RENTED" ? "warning" : "danger")}>{vehicle.status}</span>
                         </td>

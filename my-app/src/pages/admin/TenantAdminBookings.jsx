@@ -5,6 +5,8 @@ import {
   getAdminBookings,
   updateAdminBooking,
 } from "../../api/adminApi";
+import { useTenantSettings } from "../../context/TenantSettingsContext";
+import { formatCurrencyAmount } from "../../utils/currency";
 import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
 
@@ -42,6 +44,7 @@ const statusTone = (status) => {
 };
 
 export default function TenantAdminBookings() {
+  const { settings: tenantSettings } = useTenantSettings();
   const [bookings, setBookings] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [decision, setDecision] = useState(initialDecision);
@@ -211,7 +214,7 @@ export default function TenantAdminBookings() {
                       </td>
                       <td style={table.cell}>{booking.vehicleName || "Booked vehicle"}</td>
                       <td style={table.cell}>{formatDate(booking.startDate)} - {formatDate(booking.endDate)}</td>
-                      <td style={table.cell}>EUR {formatPrice(booking.totalPrice)}</td>
+                      <td style={table.cell}>{formatCurrencyAmount(booking.totalPrice, tenantSettings)}</td>
                       <td style={table.cell}>
                         <span style={badge(statusTone(booking.status))}>{booking.status}</span>
                       </td>
@@ -241,9 +244,9 @@ export default function TenantAdminBookings() {
             <div style={{ ...form.stack, marginTop: "18px" }}>
               <div style={{ ...card.panel, boxShadow: "none", borderRadius: "14px", padding: "16px" }}>
                 <div style={{ display: "grid", gap: "10px", color: palette.muted, fontSize: "0.92rem" }}>
-                  <span>Base: EUR {formatPrice(selectedBooking.basePrice)}</span>
-                  <span>Add-ons: EUR {formatPrice(selectedBooking.addonPrice)}</span>
-                  <span>Total: EUR {formatPrice(selectedBooking.totalPrice)}</span>
+                  <span>Base: {formatCurrencyAmount(selectedBooking.basePrice, tenantSettings)}</span>
+                  <span>Add-ons: {formatCurrencyAmount(selectedBooking.addonPrice, tenantSettings)}</span>
+                  <span>Total: {formatCurrencyAmount(selectedBooking.totalPrice, tenantSettings)}</span>
                   <span>Included: {(selectedBooking.addonNames || []).join(", ") || "None"}</span>
                 </div>
                 {selectedBooking.specialRequest && (

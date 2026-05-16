@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { User, Mail, MapPin, Calendar, Car, Star, Edit3, Camera, Save, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { getMyProfile, updateMyProfile } from "../../api/userProfileApi";
 import {
   getMyDriverLicense,
@@ -27,6 +28,7 @@ const emptyLicenseForm = {
 
 export default function TenantUserProfile() {
   const { user } = useAuth();
+  const isCompact = useIsCompactLayout(960);
   const [profile, setProfile] = useState(null);
   const [form, setForm] = useState(emptyForm);
   const [license, setLicense] = useState(null);
@@ -212,10 +214,10 @@ export default function TenantUserProfile() {
   }
 
   return (
-    <div style={s.mainContent}>
+    <div style={{ ...s.mainContent, ...(isCompact ? s.mainContentCompact : {}) }}>
       <header style={s.profileHeader}>
         <div style={s.coverImage}></div>
-        <div style={s.profileInfoSection}>
+        <div style={{ ...s.profileInfoSection, ...(isCompact ? s.profileInfoSectionCompact : {}) }}>
           <div style={s.avatarWrapper}>
             <img
               src={profile?.avatarUrl || form.avatarUrl || "https://i.pravatar.cc/150?u=floyd"}
@@ -230,7 +232,7 @@ export default function TenantUserProfile() {
             {error ? <p style={s.errorText}>{error}</p> : null}
           </div>
           {editing ? (
-            <div style={s.actionGroup}>
+            <div style={{ ...s.actionGroup, ...(isCompact ? s.actionGroupCompact : {}) }}>
               <button style={s.secondaryBtn} onClick={handleCancel} type="button" disabled={saving}>
                 <X size={18} /> Cancel
               </button>
@@ -247,7 +249,7 @@ export default function TenantUserProfile() {
       </header>
 
       <div style={s.profileGrid}>
-        <div style={s.statsContainer}>
+        <div style={{ ...s.statsContainer, ...(isCompact ? s.statsContainerCompact : {}) }}>
           <StatCard icon={<Car size={20} color="#3b82f6" />} label="Total Rides" value="0" />
           <StatCard icon={<Calendar size={20} color="#10b981" />} label="Member Since" value={memberSince} />
           <StatCard icon={<Star size={20} color="#f59e0b" />} label="User Rating" value="-" />
@@ -292,8 +294,8 @@ export default function TenantUserProfile() {
           )}
         </section>
 
-        <section style={{ ...s.card, gridColumn: "span 2" }}>
-          <div style={s.licenseHeader}>
+        <section style={{ ...s.card, ...(isCompact ? s.licenseCardCompact : { gridColumn: "span 2" }) }}>
+          <div style={{ ...s.licenseHeader, ...(isCompact ? s.licenseHeaderCompact : {}) }}>
             <div>
               <h2 style={s.cardTitle}>Driver License Verification</h2>
               <p style={s.licenseSubtitle}>
@@ -334,7 +336,7 @@ export default function TenantUserProfile() {
             </button>
           </div>
 
-          <div style={s.licenseUploadGrid}>
+          <div style={{ ...s.licenseUploadGrid, ...(isCompact ? s.licenseUploadGridCompact : {}) }}>
             <UploadCard
               title="Front Image"
               imageUrl={license?.frontImageUrl}
@@ -352,7 +354,7 @@ export default function TenantUserProfile() {
           {verification ? (
             <div style={s.verificationPanel}>
               <h3 style={s.verificationTitle}>AI Verification Result</h3>
-              <div style={s.verificationGrid}>
+              <div style={{ ...s.verificationGrid, ...(isCompact ? s.verificationGridCompact : {}) }}>
                 <InfoRow icon={<User size={18} />} label="Verdict" value={verification.verdict || "-"} />
                 <InfoRow icon={<Star size={18} />} label="AI Decision" value={verification.verified ? "Yes" : "No"} />
               </div>
@@ -431,6 +433,7 @@ const readError = (error, fallback) =>
 
 const s = {
   mainContent: { width: "100%", color: "#fff" },
+  mainContentCompact: { paddingBottom: "24px" },
   profileHeader: {
     background: "#0f172a",
     borderRadius: "28px",
@@ -450,6 +453,12 @@ const s = {
     marginTop: "-50px",
     gap: "25px",
     position: "relative"
+  },
+  profileInfoSectionCompact: {
+    padding: "0 18px 22px",
+    flexDirection: "column",
+    alignItems: "flex-start",
+    marginTop: "-36px",
   },
   avatarWrapper: { position: "relative" },
   largeAvatar: {
@@ -478,6 +487,10 @@ const s = {
     gap: "10px",
     marginBottom: "10px"
   },
+  actionGroupCompact: {
+    flexWrap: "wrap",
+    width: "100%",
+  },
   primaryBtn: {
     display: "flex", alignItems: "center", gap: "8px",
     background: "#2563eb", border: "none",
@@ -492,12 +505,13 @@ const s = {
   },
   successText: { color: "#34d399", margin: "8px 0 0 0", fontSize: "14px" },
   errorText: { color: "#f87171", margin: "8px 0 0 0", fontSize: "14px" },
-  profileGrid: { display: "grid", gridTemplateColumns: "1fr 1fr", gap: "25px" },
-  statsContainer: { gridColumn: "span 2", display: "flex", gap: "20px" },
+  profileGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "25px" },
+  statsContainer: { gridColumn: "1 / -1", display: "flex", gap: "20px", flexWrap: "wrap" },
+  statsContainerCompact: { gap: "14px" },
   statCard: {
     flex: 1, background: "#0f172a", padding: "20px",
     borderRadius: "20px", border: "1px solid #1e293b",
-    display: "flex", alignItems: "center", gap: "15px"
+    display: "flex", alignItems: "center", gap: "15px", minWidth: "220px"
   },
   statIcon: { background: "#161f2e", padding: "12px", borderRadius: "15px" },
   statValue: { fontSize: "20px", fontWeight: "700" },
@@ -510,7 +524,7 @@ const s = {
   infoValue: { fontWeight: "500" },
   formGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
     gap: "16px"
   },
   fieldGroup: {
@@ -547,6 +561,9 @@ const s = {
     alignItems: "flex-start",
     gap: "20px",
     marginBottom: "20px"
+  },
+  licenseHeaderCompact: {
+    flexDirection: "column",
   },
   licenseSubtitle: {
     color: "#94a3b8",
@@ -604,9 +621,12 @@ const s = {
   },
   licenseUploadGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 260px), 1fr))",
     gap: "20px",
     marginBottom: "24px"
+  },
+  licenseUploadGridCompact: {
+    gap: "16px",
   },
   uploadCard: {
     background: "#111827",
@@ -667,8 +687,14 @@ const s = {
   },
   verificationGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
     gap: "16px"
+  },
+  verificationGridCompact: {
+    gap: "12px",
+  },
+  licenseCardCompact: {
+    gridColumn: "auto",
   },
   verificationMeta: {
     marginTop: "18px",

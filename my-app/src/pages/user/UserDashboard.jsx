@@ -16,9 +16,11 @@ import {
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
+import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { createBooking } from "../../api/bookingApi";
 import { getAddons } from "../../api/addonApi";
 import { getVehicles } from "../../api/vehicleApi";
+import { formatCurrencyAmount, formatCurrencyPerDay } from "../../utils/currency";
 import { resolveMediaUrl } from "../../utils/media";
 
 const fallbackImage =
@@ -27,6 +29,7 @@ const DEFAULT_LOCATION = "Pristina";
 
 export default function TenantUserDashboard() {
   const { user } = useAuth();
+  const { settings: tenantSettings } = useTenantSettings();
   const { tenantSlug } = useParams();
   const navigate = useNavigate();
   const [vehicles, setVehicles] = useState([]);
@@ -216,9 +219,9 @@ export default function TenantUserDashboard() {
           </h2>
           <p style={ds.heroText}>
             {heroVehicle
-              ? `${heroVehicle.categoryName || "Premium vehicle"} • ${
+              ? `${heroVehicle.categoryName || "Premium vehicle"} ? ${
                   heroVehicle.year
-                } • €${heroVehicle.dailyRate}/day • ${
+                } ? ${formatCurrencyPerDay(heroVehicle.dailyRate, tenantSettings)} ? ${
                   heroVehicle.locationName || "Available now"
                 }`
               : "Choose from premium vehicles with fast delivery."}
@@ -277,6 +280,7 @@ export default function TenantUserDashboard() {
             <CarCard
               key={vehicle.id}
               vehicle={vehicle}
+              currencySettings={tenantSettings}
               onDetails={() => setDetailsVehicle(vehicle)}
             />
           ))
@@ -286,6 +290,7 @@ export default function TenantUserDashboard() {
       {detailsVehicle ? (
         <VehicleDetailsModal
           vehicle={detailsVehicle}
+          currencySettings={tenantSettings}
           tenantSlug={tenantSlug}
           userEmail={user?.email}
           onBookingSaved={() => {
@@ -302,7 +307,8 @@ export default function TenantUserDashboard() {
 // --------------------------------------------------------------
 // CarCard – komponenti i vogël për kartelën e makinës
 // --------------------------------------------------------------
-function CarCard({ vehicle, onDetails }) {
+function CarCard({ vehicle, onDetails, currencySettings }) {
+  const isAvailable = vehicle.status === "AVAILABLE";
   const name = `${vehicle.make} ${vehicle.model}`;
   const price = vehicle.dailyRate;
   const img =
@@ -336,12 +342,16 @@ function CarCard({ vehicle, onDetails }) {
 
       <div style={ds.cardBottom}>
         <span>
-          <strong style={{ fontSize: "22px" }}>€{price}</strong>/day
+          <strong style={{ fontSize: "22px" }}>{formatCurrencyAmount(price, currencySettings, { tight: true })}</strong>/day
         </span>
-
-        <button style={ds.detailsBtn} type="button" onClick={onDetails}>
-          Details
-        </button>
+        <div style={{ display: "grid", justifyItems: "end", gap: "6px" }}>
+          <button style={ds.detailsBtn} type="button" onClick={onDetails}>
+            Details
+          </button>
+          {!isAvailable && vehicle.statusMessage ? (
+            <span style={ds.rentedMeta}>{vehicle.statusMessage}</span>
+          ) : null}
+        </div>
       </div>
     </div>
   );
@@ -352,6 +362,7 @@ function CarCard({ vehicle, onDetails }) {
 // --------------------------------------------------------------
 function VehicleDetailsModal({
   vehicle,
+  currencySettings,
   tenantSlug,
   userEmail,
   onBookingSaved,
@@ -558,7 +569,7 @@ function VehicleDetailsModal({
           <div style={ds.modalInfo}>
             <div style={ds.modalPriceRow}>
               <div style={ds.modalPrice}>
-                <strong>€{formatPrice(dailyRate)}</strong>
+                <strong>{formatCurrencyAmount(dailyRate, currencySettings, { tight: true })}</strong>
                 <span>/day</span>
               </div>
 
@@ -572,7 +583,7 @@ function VehicleDetailsModal({
                   onClick={() => isAvailable && setPanelMode("book")}
                   disabled={!isAvailable}
                 >
-                  Book
+                  {isAvailable ? "Book" : unavailableLabel}
                 </button>
               ) : (
                 <button
@@ -643,7 +654,7 @@ function VehicleDetailsModal({
                   <div style={ds.errorBannerCompact}>
                     This vehicle is currently{" "}
                     {formatEnumLabel(vehicle.status).toLowerCase()} and cannot be
-                    booked right now.
+                    booked right now. {vehicle.statusMessage || ""}
                   </div>
                 )}
 
@@ -686,7 +697,7 @@ function VehicleDetailsModal({
                 <div style={ds.pricePanel}>
                   <PriceLine
                     label="Daily rate"
-                    value={`€${formatPrice(dailyRate)}`}
+                    value={formatCurrencyAmount(dailyRate, currencySettings)}
                   />
                   <PriceLine
                     label="Rental days"
@@ -694,7 +705,7 @@ function VehicleDetailsModal({
                   />
                   <PriceLine
                     label="Base amount"
-                    value={`€${formatPrice(baseAmount)}`}
+                    value={formatCurrencyAmount(baseAmount, currencySettings)}
                   />
 
                   {selectableAddons.length === 0 ? (
@@ -723,12 +734,12 @@ function VehicleDetailsModal({
 
                   <PriceLine
                     label="Add-ons"
-                    value={`€${formatPrice(addonsAmount)}`}
+                    value={formatCurrencyAmount(addonsAmount, currencySettings)}
                   />
 
                   <div style={ds.totalRow}>
                     <span>Final amount</span>
-                    <strong>€{formatPrice(finalAmount)}</strong>
+                    <strong>{formatCurrencyAmount(finalAmount, currencySettings)}</strong>
                   </div>
                 </div>
 
@@ -801,7 +812,7 @@ function PriceLine({ label, value }) {
   );
 }
 
-function AddonQuantityRow({ label, description, price, available, type, value, onChange }) {
+function AddonQuantityRow({ label, description, price, available, type, value, onChange, currencySettings }) {
   const stock = Number(available ?? 0);
 
   const updateValue = (nextValue) => {
@@ -814,7 +825,7 @@ function AddonQuantityRow({ label, description, price, available, type, value, o
       <div>
         <div style={ds.addonQuantityLabel}>{label}</div>
         <div style={ds.addonQuantityMeta}>
-          €{formatPrice(price)} each · {stock} available
+          {formatCurrencyAmount(price, currencySettings)} each · {stock} available
         </div>
       </div>
       <div style={ds.quantityStepper}>
@@ -847,7 +858,7 @@ function AddonQuantityRow({ label, description, price, available, type, value, o
   );
 }
 
-function GenericAddonQuantityRow({ label, description, price, available, type, value, onChange }) {
+function GenericAddonQuantityRow({ label, description, price, available, type, value, onChange, currencySettings }) {
   const stock = Number(available ?? 0);
 
   const updateValue = (nextValue) => {
@@ -860,7 +871,7 @@ function GenericAddonQuantityRow({ label, description, price, available, type, v
       <div>
         <div style={ds.addonQuantityLabel}>{label}</div>
         <div style={ds.addonQuantityMeta}>
-          EUR {formatPrice(price)} {type === "DAILY" ? "per day" : "each"} · {stock} available
+          {formatCurrencyAmount(price, currencySettings)} {type === "DAILY" ? "per day" : "each"} · {stock} available
         </div>
         {description ? (
           <div style={{ color: "#64748b", fontSize: "12px", marginTop: "4px" }}>
@@ -1169,6 +1180,7 @@ const ds = {
     fontSize: "12px",
   },
   cardBottom: { marginTop: "20px", display: "flex", justifyContent: "space-between", alignItems: "center" },
+  rentedMeta: { color: "#fbbf24", fontSize: "11px", textAlign: "right", maxWidth: "160px", lineHeight: 1.4 },
   detailsBtn: {
     background: "#3b82f6",
     border: "none",
@@ -1216,7 +1228,7 @@ const ds = {
   modalSubtitle: { marginTop: "8px", color: "#94a3b8" },
   modalContent: {
     display: "grid",
-    gridTemplateColumns: "1.5fr 0.9fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 340px), 1fr))",
     gap: "24px",
     alignItems: "start",
   },
@@ -1362,7 +1374,7 @@ const ds = {
   detailValue: { fontWeight: 600 },
   bookingGrid: {
     display: "grid",
-    gridTemplateColumns: "1fr 1fr",
+    gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
     gap: "12px",
   },
   fieldGroup: {
@@ -1480,3 +1492,11 @@ const ds = {
     padding: "12px 14px",
   },
 };
+
+
+
+
+
+
+
+

@@ -4,6 +4,7 @@ import {
     createTenant,
     updateTenant,
     deleteTenant,
+    getSupportedTenantCurrencies,
 } from "../api/tenantApi";
 import DeleteModal from "../components/DeleteModal";
 import CreateAndEditModal from "../components/CreateAndEditModal";
@@ -42,6 +43,9 @@ const emptyCreateForm = {
 
 export default function AdminTenants() {
     const { logout } = useAuth();
+    const [isCompact, setIsCompact] = useState(() =>
+        typeof window !== "undefined" ? window.innerWidth <= 960 : false
+    );
     const [tenants, setTenants] = useState([]);
     const [loading, setLoading] = useState(true);
     const [modal, setModal] = useState(null); // null | "create" | "edit"
@@ -51,6 +55,7 @@ export default function AdminTenants() {
     const [form, setForm] = useState(emptyCreateForm);
     const [error, setError] = useState("");
     const [alert, setAlert] = useState({ type: "", message: "" });
+    const [currencyOptions, setCurrencyOptions] = useState([]);
 
     const showAlert = (type, message) => {
         setAlert({ type, message });
@@ -75,6 +80,15 @@ export default function AdminTenants() {
 
     useEffect(() => {
         load();
+        getSupportedTenantCurrencies()
+            .then((res) => setCurrencyOptions(Array.isArray(res.data) ? res.data : []))
+            .catch(() => setCurrencyOptions([]));
+    }, []);
+
+    useEffect(() => {
+        const onResize = () => setIsCompact(window.innerWidth <= 960);
+        window.addEventListener("resize", onResize);
+        return () => window.removeEventListener("resize", onResize);
     }, []);
 
     const openCreate = () => {
@@ -201,8 +215,8 @@ export default function AdminTenants() {
     const submitLabel = modal === "create" ? "Create" : "Save";
 
     return (
-        <div style={s.page}>
-            <aside style={s.sidebar}>
+        <div style={{ ...s.page, ...(isCompact ? s.pageCompact : {}) }}>
+            <aside style={{ ...s.sidebar, ...(isCompact ? s.sidebarCompact : {}) }}>
                 <div style={s.sidebarLogo}>
                     <div style={s.logoBox}>WG</div>
                     <span style={s.logoText}>WheelGo</span>
@@ -217,8 +231,8 @@ export default function AdminTenants() {
                 </button>
             </aside>
 
-            <main style={s.main}>
-                <div style={s.header}>
+            <main style={{ ...s.main, ...(isCompact ? s.mainCompact : {}) }}>
+                <div style={{ ...s.header, ...(isCompact ? s.headerCompact : {}) }}>
                     <div>
                         <h1 style={s.pageTitle}>Tenants</h1>
                         <p style={s.pageSubtitle}>{tenants.length} active companies</p>
@@ -339,6 +353,7 @@ export default function AdminTenants() {
                 form={form}
                 setForm={setForm}
                 isEdit={modal === "edit"}
+                currencyOptions={currencyOptions}
             />
 
             <DeleteModal
@@ -360,6 +375,9 @@ const s = {
         background: "#0a0a0f",
         fontFamily: "'Inter', sans-serif",
     },
+    pageCompact: {
+        display: "block",
+    },
     sidebar: {
         width: "220px",
         background: "#0d0d14",
@@ -367,6 +385,11 @@ const s = {
         display: "flex",
         flexDirection: "column",
         padding: "24px 16px",
+    },
+    sidebarCompact: {
+        width: "100%",
+        borderRight: "none",
+        borderBottom: "1px solid #1e2030",
     },
     sidebarLogo: {
         display: "flex",
@@ -415,11 +438,18 @@ const s = {
         padding: "24px 40px",
         overflowY: "auto",
     },
+    mainCompact: {
+        padding: "20px 16px 28px",
+    },
     header: {
         display: "flex",
         justifyContent: "space-between",
         alignItems: "center",
         marginBottom: "28px",
+    },
+    headerCompact: {
+        alignItems: "flex-start",
+        flexDirection: "column",
     },
     pageTitle: {
         color: "#f0f4ff",

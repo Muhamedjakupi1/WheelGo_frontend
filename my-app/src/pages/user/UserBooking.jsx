@@ -8,12 +8,17 @@ import {
   Receipt,
 } from "lucide-react";
 import { getMyBookings } from "../../api/bookingApi";
+import { useTenantSettings } from "../../context/TenantSettingsContext";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
+import { formatCurrencyAmount } from "../../utils/currency";
 import { resolveMediaUrl } from "../../utils/media";
 
 const fallbackImage =
   "https://images.unsplash.com/photo-1492144534655-ae79c964c9d7?auto=format&fit=crop&w=1200&q=80";
 
 export default function TenantBookingPage() {
+  const { settings: tenantSettings } = useTenantSettings();
+  const isCompact = useIsCompactLayout(900);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -44,7 +49,7 @@ export default function TenantBookingPage() {
 
   return (
     <div>
-      <main style={s.mainContent}>
+      <main style={{ ...s.mainContent, ...(isCompact ? s.mainContentCompact : {}) }}>
         <header style={s.topbar}>
           <div>
             <h1 style={s.greeting}>My Bookings</h1>
@@ -67,13 +72,13 @@ export default function TenantBookingPage() {
 
         {error ? <div style={s.errorBanner}>{error}</div> : null}
 
-        <section style={s.activeBookingCard}>
+        <section style={{ ...s.activeBookingCard, ...(isCompact ? s.activeBookingCardCompact : {}) }}>
           <div style={s.activeBadge}>Latest Booking</div>
           {loading ? (
             <div style={{ color: "#94a3b8" }}>Loading booking details...</div>
           ) : activeBooking ? (
-            <div style={s.activeContent}>
-              <div style={s.carInfo}>
+            <div style={{ ...s.activeContent, ...(isCompact ? s.activeContentCompact : {}) }}>
+              <div style={{ ...s.carInfo, ...(isCompact ? s.carInfoCompact : {}) }}>
                 <h2 style={{ fontSize: 28, margin: 0 }}>{activeBooking.vehicleName || "Booked Vehicle"}</h2>
                 <p style={{ color: "#94a3b8" }}>
                   {formatDateRange(activeBooking.startDate, activeBooking.endDate)} • {activeBooking.totalDays} day(s)
@@ -89,13 +94,13 @@ export default function TenantBookingPage() {
                   </div>
                   <div style={s.timelineLine}></div>
                   <div style={s.timelinePoint}>
-                    <AlertCircle size={16} color="#64748b" /> €{formatPrice(activeBooking.totalPrice)}
+                    <AlertCircle size={16} color="#64748b" /> {formatCurrencyAmount(activeBooking.totalPrice, tenantSettings)}
                   </div>
                 </div>
 
                 <div style={s.bookingMetaGrid}>
-                  <MetaCard label="Base price" value={`€${formatPrice(activeBooking.basePrice)}`} />
-                  <MetaCard label="Add-ons" value={`€${formatPrice(activeBooking.addonPrice)}`} />
+                  <MetaCard label="Base price" value={formatCurrencyAmount(activeBooking.basePrice, tenantSettings)} />
+                  <MetaCard label="Add-ons" value={formatCurrencyAmount(activeBooking.addonPrice, tenantSettings)} />
                   <MetaCard
                     label="Baby seat"
                     value={activeBooking.babySeatRequested ? "Requested" : "No"}
@@ -113,7 +118,7 @@ export default function TenantBookingPage() {
               <img
                 src={resolveMediaUrl(activeBooking.vehicleImageUrl) || fallbackImage}
                 alt={activeBooking.vehicleName || "booked car"}
-                style={s.activeCarImg}
+                style={{ ...s.activeCarImg, ...(isCompact ? s.activeCarImgCompact : {}) }}
               />
             </div>
           ) : (
@@ -147,7 +152,7 @@ export default function TenantBookingPage() {
                       car={booking.vehicleName || "Booked Vehicle"}
                       dateRange={formatDateRange(booking.startDate, booking.endDate)}
                       location={booking.locationName || "-"}
-                      price={`€${formatPrice(booking.totalPrice)}`}
+                      price={formatCurrencyAmount(booking.totalPrice, tenantSettings)}
                       status={formatStatus(booking.status)}
                       img={resolveMediaUrl(booking.vehicleImageUrl) || fallbackImage}
                     />
@@ -224,6 +229,7 @@ function formatPrice(value) {
 
 const s = {
   mainContent: { flex: 1, padding: "40px", overflowY: "auto" },
+  mainContentCompact: { padding: "20px 0 28px" },
   topbar: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "40px", gap: "20px", flexWrap: "wrap" },
   greeting: { fontSize: "32px", fontWeight: "700", margin: 0, color: "#fff" },
   filterActions: { display: "flex", gap: "15px", flexWrap: "wrap" },
@@ -231,10 +237,14 @@ const s = {
   datePicker: { display: "flex", alignItems: "center", gap: "8px", background: "#3b82f6", padding: "10px 20px", borderRadius: "10px", color: "#fff" },
   errorBanner: { background: "rgba(127, 29, 29, 0.25)", color: "#fecaca", border: "1px solid #7f1d1d", borderRadius: "14px", padding: "12px 14px", marginBottom: "20px" },
   activeBookingCard: { background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: "28px", padding: "40px", border: "1px solid #334155", position: "relative", overflow: "hidden" },
+  activeBookingCardCompact: { padding: "22px 18px" },
   activeBadge: { background: "rgba(59, 130, 246, 0.2)", color: "#3b82f6", padding: "6px 15px", borderRadius: "20px", fontSize: 12, fontWeight: "700", width: "fit-content", marginBottom: 20 },
   activeContent: { display: "flex", justifyContent: "space-between", alignItems: "center", gap: "24px", flexWrap: "wrap" },
+  activeContentCompact: { flexDirection: "column", alignItems: "stretch" },
   carInfo: { flex: 1, minWidth: "300px" },
+  carInfoCompact: { minWidth: 0 },
   activeCarImg: { width: "42%", minWidth: "280px", minHeight: "240px", objectFit: "cover", borderRadius: "20px", filter: "drop-shadow(0 20px 30px rgba(0,0,0,0.35))" },
+  activeCarImgCompact: { width: "100%", minWidth: 0, minHeight: "200px" },
   statusTimeline: { display: "flex", alignItems: "center", gap: "10px", marginTop: 30, flexWrap: "wrap" },
   timelinePoint: { display: "flex", alignItems: "center", gap: "5px", fontSize: 14 },
   timelineLine: { height: "2px", width: "40px", background: "#3b82f6" },
@@ -242,7 +252,7 @@ const s = {
   metaCard: { background: "rgba(15, 23, 42, 0.6)", border: "1px solid #334155", borderRadius: "16px", padding: "14px" },
   metaLabel: { color: "#94a3b8", fontSize: "12px", textTransform: "uppercase", letterSpacing: "0.04em", marginBottom: "6px" },
   metaValue: { color: "#fff", fontWeight: "600", lineHeight: 1.45 },
-  tableContainer: { background: "#0b121e", borderRadius: "24px", padding: "20px", border: "1px solid #1e293b" },
+  tableContainer: { background: "#0b121e", borderRadius: "24px", padding: "20px", border: "1px solid #1e293b", overflowX: "auto" },
   table: { width: "100%", borderCollapse: "collapse" },
   th: { textAlign: "left", padding: "15px", color: "#64748b", fontWeight: "500", borderBottom: "1px solid #1e293b" },
   tr: { borderBottom: "1px solid #1e293b" },
@@ -250,3 +260,4 @@ const s = {
   tableImgBox: { background: "#161f2e", padding: "5px", borderRadius: "8px" },
   statusBadge: { background: "rgba(16, 185, 129, 0.1)", color: "#10b981", padding: "5px 12px", borderRadius: "8px", fontSize: 13 },
 };
+

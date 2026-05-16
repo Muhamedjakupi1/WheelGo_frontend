@@ -7,6 +7,8 @@ import {
   getAdminAddons,
   updateAdminAddon,
 } from "../../api/adminApi";
+import { useTenantSettings } from "../../context/TenantSettingsContext";
+import { formatCurrencyAmount } from "../../utils/currency";
 import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
 
@@ -20,6 +22,7 @@ const defaultForm = {
 };
 
 export default function TenantAdminAddons() {
+  const { settings: tenantSettings } = useTenantSettings();
   const [addons, setAddons] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [formData, setFormData] = useState(defaultForm);
@@ -212,7 +215,7 @@ export default function TenantAdminAddons() {
                       </td>
                       <td style={table.cell}>{addon.type || "ONE_TIME"}</td>
                       <td style={table.cell}>{addon.quantity ?? 0}</td>
-                      <td style={table.cell}>EUR {Number(addon.price || 0).toFixed(2)}</td>
+                      <td style={table.cell}>{formatCurrencyAmount(addon.price, tenantSettings)}</td>
                       <td style={table.cell}>
                         <span style={badge(addon.isActive ? "success" : "danger")}>
                           {addon.isActive ? "Active" : "Inactive"}

@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import { Outlet, NavLink, useParams, useNavigate } from "react-router-dom";
 import { LayoutGrid, Clock, Settings, MessageSquare, User, Headphones, LogOut } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
@@ -7,6 +7,15 @@ export default function UserLayout() {
   const { tenantSlug } = useParams();
   const { logout, loading } = useAuth();
   const navigate = useNavigate();
+  const [isCompact, setIsCompact] = useState(() =>
+    typeof window !== "undefined" ? window.innerWidth <= 960 : false
+  );
+
+  useEffect(() => {
+    const onResize = () => setIsCompact(window.innerWidth <= 960);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
 
   if (loading) return <div style={{ color: "white", padding: "20px" }}>Loading...</div>;
 
@@ -16,13 +25,13 @@ export default function UserLayout() {
   };
 
   return (
-    <div style={{ display: "flex", minHeight: "100vh", background: "#080a0f" }}>
-      <aside style={s.sidebar}>
+    <div style={{ display: isCompact ? "block" : "flex", minHeight: "100vh", background: "#080a0f" }}>
+      <aside style={{ ...s.sidebar, ...(isCompact ? s.sidebarCompact : {}) }}>
         <div style={s.logoSection}>
           <h2 style={s.logoText}>CarRent</h2>
         </div>
 
-        <nav style={s.nav}>
+        <nav style={{ ...s.nav, ...(isCompact ? s.navCompact : {}) }}>
           <NavItem to={`/t/${tenantSlug}/app`} icon={<LayoutGrid size={20} />} label="Dashboard" />
            <NavItem to={`/t/${tenantSlug}/bookings`} icon={<Clock size={20} />} label="My Booking" /> 
           <NavItem to={`/t/${tenantSlug}/settings`} icon={<Settings size={20} />} label="Settings" /> 
@@ -30,14 +39,14 @@ export default function UserLayout() {
           <NavItem to={`/t/${tenantSlug}/support`} icon={<Headphones size={20} />} label="Support" /> 
         </nav>
 
-        <button onClick={handleLogout} style={s.logoutBtn}>
+        <button onClick={handleLogout} style={{ ...s.logoutBtn, ...(isCompact ? s.logoutBtnCompact : {}) }}>
           <LogOut size={18} />
           <span>Log Out</span>
         </button>
       </aside>
 
 
-      <main style={s.mainWrapper}>
+      <main style={{ ...s.mainWrapper, ...(isCompact ? s.mainWrapperCompact : {}) }}>
         <Outlet />
       </main>
     </div>
@@ -78,11 +87,24 @@ const s = {
   logoSection: { marginBottom: "50px", color: "white", paddingLeft: "10px" },
   logoText: { fontSize: "24px", fontWeight: "bold", letterSpacing: "1px" },
   nav: { display: "flex", flexDirection: "column", gap: "8px", flex: 1 },
+  navCompact: { flexDirection: "row", flexWrap: "wrap" },
   mainWrapper: {
     flex: 1,
     marginLeft: "260px", 
     padding: "40px",
     width: "calc(100% - 260px)",
+  },
+  mainWrapperCompact: {
+    marginLeft: 0,
+    width: "100%",
+    padding: "20px 16px 28px",
+  },
+  sidebarCompact: {
+    position: "static",
+    width: "100%",
+    height: "auto",
+    padding: "18px 16px",
+    gap: "16px",
   },
   logoutBtn: {
     marginTop: "auto",
@@ -98,5 +120,8 @@ const s = {
     cursor: "pointer",
     fontWeight: "600",
     transition: "0.3s",
+  },
+  logoutBtnCompact: {
+    marginTop: 0,
   },
 };
