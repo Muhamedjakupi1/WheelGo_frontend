@@ -1,6 +1,8 @@
-﻿import { useEffect, useMemo, useState } from "react";
-import { getAdminUsers, updateAdminUser } from "../../api/adminApi";
+import { useEffect, useMemo, useState } from "react";
+import { Trash2 } from "lucide-react";
+import { deleteAdminUser, getAdminUsers, updateAdminUser } from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
+import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
 
 const defaultForm = { email: "", password: "", role: "USER", isActive: true };
@@ -12,6 +14,7 @@ export default function TenantAdminUsers() {
   const [selectedId, setSelectedId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [deleteState, setDeleteState] = useState({ open: false, id: null, label: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
@@ -20,13 +23,18 @@ export default function TenantAdminUsers() {
     [currentUser?.role]
   );
 
+  const selectedUser = useMemo(
+    () => users.find((user) => user.id === selectedId) || null,
+    [users, selectedId]
+  );
+
   const loadData = async () => {
     try {
       setLoading(true);
       setError("");
       const response = await getAdminUsers();
-      setUsers(response.data);
-      setSuccess("Users loaded successfully.");
+      setUsers(Array.isArray(response.data) ? response.data : []);
+      setSuccess("");
     } catch (err) {
       setSuccess("");
       setError(err.response?.data?.message || "Failed to load users.");
@@ -59,6 +67,8 @@ export default function TenantAdminUsers() {
 
   const handleSubmit = async (event) => {
     event.preventDefault();
+    if (!selectedId) return;
+
     try {
       setSaving(true);
       setError("");
@@ -86,11 +96,42 @@ export default function TenantAdminUsers() {
     }
   };
 
+  const openDeleteModal = (user) => {
+    setDeleteState({
+      open: true,
+      id: user.id,
+      label: user.email || "this user",
+    });
+    setSuccess("");
+    setError("");
+  };
+
+  const handleDelete = async () => {
+    if (!deleteState.id) return;
+
+    try {
+      setSaving(true);
+      setError("");
+      setSuccess("");
+      await deleteAdminUser(deleteState.id);
+      await loadData();
+      if (selectedId === deleteState.id) {
+        resetForm();
+      }
+      setDeleteState({ open: false, id: null, label: "" });
+      setSuccess("User deleted successfully.");
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete user.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
   return (
     <div style={layout.contentStack}>
       <section style={card.panel}>
         <h1 style={{ margin: 0, fontSize: "1.9rem", color: palette.text }}>Tenant Users</h1>
-        <p style={card.subtitle}>Review user accounts and update roles, status, email, or password.</p>
+        <p style={card.subtitle}>Review user accounts, update access, and delete accounts that should no longer exist.</p>
       </section>
 
       <section style={grid.two}>
@@ -136,7 +177,10 @@ export default function TenantAdminUsers() {
                           <span style={badge(active ? "success" : "danger")}>{active ? "Active" : "Inactive"}</span>
                         </td>
                         <td style={table.cell}>
-                          <button style={button.ghost} onClick={() => handleEdit(user)}>Edit</button>
+                          <div style={{ display: "flex", gap: "10px", flexWrap: "wrap" }}>
+                            <button style={button.ghost} onClick={() => handleEdit(user)}>Edit</button>
+                            <button style={button.danger} onClick={() => openDeleteModal(user)}>Delete</button>
+                          </div>
                         </td>
                       </tr>
                     );
@@ -182,13 +226,34 @@ export default function TenantAdminUsers() {
 
               <div style={form.actions}>
                 <button type="submit" style={button.primary} disabled={saving}>{saving ? "Saving..." : "Update User"}</button>
-                <button type="button" style={button.secondary} onClick={resetForm}>Reset</button>
+                <button type="button" style={button.secondary} onClick={resetForm} disabled={saving}>Reset</button>
+                {selectedUser ? (
+                  <button
+                    type="button"
+                    style={{ ...button.danger, display: "inline-flex", alignItems: "center", gap: "8px" }}
+                    onClick={() => openDeleteModal(selectedUser)}
+                    disabled={saving}
+                  >
+                    <Trash2 size={16} />
+                    Delete
+                  </button>
+                ) : null}
               </div>
             </form>
           )}
         </article>
       </section>
+
+      <AdminConfirmModal
+        open={deleteState.open}
+        title="Delete this user?"
+        description={`This permanently removes ${deleteState.label}, including their bookings, tickets, reviews, and related tenant data.`}
+        error={error}
+        confirmLabel="Delete user"
+        loading={saving}
+        onConfirm={handleDelete}
+        onCancel={() => setDeleteState({ open: false, id: null, label: "" })}
+      />
     </div>
   );
 }
-

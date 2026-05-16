@@ -24,8 +24,6 @@ import { resolveMediaUrl } from "../../utils/media";
 const fallbackImage =
   "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80";
 const DEFAULT_LOCATION = "Pristina";
-const FALLBACK_BABY_SEAT_PRICE = 25;
-const FALLBACK_BLUETOOTH_PRICE = 10;
 
 export default function TenantUserDashboard() {
   const { user } = useAuth();
@@ -375,9 +373,8 @@ function VehicleDetailsModal({
   const [panelMode, setPanelMode] = useState("details");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
-  const [babySeatQuantity, setBabySeatQuantity] = useState(0);
-  const [bluetoothQuantity, setBluetoothQuantity] = useState(0);
   const [addons, setAddons] = useState([]);
+  const [addonQuantities, setAddonQuantities] = useState({});
   const [customRequest, setCustomRequest] = useState("");
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
@@ -391,34 +388,23 @@ function VehicleDetailsModal({
       .catch((err) => console.error("Gabim gjatë marrjes së addons:", err));
   }, []);
 
- const babySeatAddon = useMemo(() => {
-  return addons.find((addon) => {
-    const name = addon.name?.toLowerCase() || "";
-
-    return name.includes("baby");
-  });
-}, [addons]);
-
-const bluetoothAddon = useMemo(() => {
-  return addons.find((addon) => {
-    const name = addon.name?.toLowerCase() || "";
-
-    return name.includes("bluetooth");
-  });
-}, [addons]);
-
-  const babySeatPrice = babySeatAddon?.price ?? FALLBACK_BABY_SEAT_PRICE;
-  const bluetoothPrice = bluetoothAddon?.price ?? FALLBACK_BLUETOOTH_PRICE;
-  const babySeatAvailable = babySeatAddon?.quantity ?? 0;
-  const bluetoothAvailable = bluetoothAddon?.quantity ?? 0;
+  const selectableAddons = useMemo(
+    () => addons.filter((addon) => addon?.isActive),
+    [addons]
+  );
 
   const imageUrl = galleryImages[activeImageIndex] || fallbackImage;
   const canSlide = galleryImages.length > 1;
   const dailyRate = Number(vehicle.dailyRate || 0);
   const rentalDays = calculateRentalDays(startDate, endDate);
   const baseAmount = rentalDays * dailyRate;
-  const addonsAmount =
-    babySeatQuantity * babySeatPrice + bluetoothQuantity * bluetoothPrice;
+  const addonsAmount = selectableAddons.reduce((total, addon) => {
+    const quantity = Number(addonQuantities[addon.id] || 0);
+    if (quantity <= 0) return total;
+    const unitPrice = Number(addon.price || 0);
+    const multiplier = addon.type === "DAILY" ? rentalDays || 1 : 1;
+    return total + quantity * unitPrice * multiplier;
+  }, 0);
   const finalAmount = baseAmount + addonsAmount;
   const today = getTodayDateString();
   const isAvailable = vehicle.status === "AVAILABLE";
@@ -459,9 +445,12 @@ const bluetoothAddon = useMemo(() => {
         vehicleId: vehicle.id,
         startDate,
         endDate,
-        babySeatRequested: babySeatQuantity > 0,
-        babySeatQuantity,
-        bluetoothQuantity,
+        addons: selectableAddons
+          .map((addon) => ({
+            addonId: addon.id,
+            quantity: Number(addonQuantities[addon.id] || 0),
+          }))
+          .filter((addon) => addon.quantity > 0),
         specialRequest: customRequest.trim() || null,
       });
 
@@ -708,21 +697,29 @@ const bluetoothAddon = useMemo(() => {
                     value={`€${formatPrice(baseAmount)}`}
                   />
 
-                  <AddonQuantityRow
-                    label="Baby seat"
-                    price={babySeatPrice}
-                    available={babySeatAvailable}
-                    value={babySeatQuantity}
-                    onChange={setBabySeatQuantity}
-                  />
-
-                  <AddonQuantityRow
-                    label="Bluetooth"
-                    price={bluetoothPrice}
-                    available={bluetoothAvailable}
-                    value={bluetoothQuantity}
-                    onChange={setBluetoothQuantity}
-                  />
+                  {selectableAddons.length === 0 ? (
+                    <div style={{ color: "#94a3b8", fontSize: "0.92rem" }}>
+                      No add-ons are available for this tenant right now.
+                    </div>
+                  ) : (
+                    selectableAddons.map((addon) => (
+                      <GenericAddonQuantityRow
+                        key={addon.id}
+                        label={addon.name || "Add-on"}
+                        description={addon.description}
+                        price={addon.price}
+                        available={addon.quantity}
+                        type={addon.type}
+                        value={Number(addonQuantities[addon.id] || 0)}
+                        onChange={(nextValue) =>
+                          setAddonQuantities((current) => ({
+                            ...current,
+                            [addon.id]: nextValue,
+                          }))
+                        }
+                      />
+                    ))
+                  )}
 
                   <PriceLine
                     label="Add-ons"
@@ -804,9 +801,8 @@ function PriceLine({ label, value }) {
   );
 }
 
-function AddonQuantityRow({ label, price, available, value, onChange }) {
+function AddonQuantityRow({ label, description, price, available, type, value, onChange }) {
   const stock = Number(available ?? 0);
-  const canIncrease = value < stock;
 
   const updateValue = (nextValue) => {
     const normalized = Math.max(0, Math.min(stock, Number(nextValue) || 0));
@@ -820,6 +816,57 @@ function AddonQuantityRow({ label, price, available, value, onChange }) {
         <div style={ds.addonQuantityMeta}>
           €{formatPrice(price)} each · {stock} available
         </div>
+      </div>
+      <div style={ds.quantityStepper}>
+        <button
+          type="button"
+          style={ds.quantityButton}
+          onClick={() => updateValue(value - 1)}
+          disabled={value <= 0}
+        >
+          -
+        </button>
+        <input
+          type="number"
+          min="0"
+          max={stock}
+          value={value}
+          onChange={(event) => updateValue(event.target.value)}
+          style={ds.quantityInput}
+        />
+        <button
+          type="button"
+          style={ds.quantityButton}
+          onClick={() => updateValue(Number(value) + 1)}
+          disabled={Number(value) >= stock}
+        >
+          +
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function GenericAddonQuantityRow({ label, description, price, available, type, value, onChange }) {
+  const stock = Number(available ?? 0);
+
+  const updateValue = (nextValue) => {
+    const normalized = Math.max(0, Math.min(stock, Number(nextValue) || 0));
+    onChange(normalized);
+  };
+
+  return (
+    <div style={ds.addonQuantityRow}>
+      <div>
+        <div style={ds.addonQuantityLabel}>{label}</div>
+        <div style={ds.addonQuantityMeta}>
+          EUR {formatPrice(price)} {type === "DAILY" ? "per day" : "each"} · {stock} available
+        </div>
+        {description ? (
+          <div style={{ color: "#64748b", fontSize: "12px", marginTop: "4px" }}>
+            {description}
+          </div>
+        ) : null}
       </div>
       <div style={ds.quantityStepper}>
         <button
