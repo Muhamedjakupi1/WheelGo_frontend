@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
-import { CarFront, Image, LayoutGrid, LogOut, MapPin, Tags, Users } from "lucide-react";
+import { CalendarCheck, CarFront, Image, LayoutGrid, LogOut, MapPin, Package, Tags, Users } from "lucide-react";
 import { getAdminTenantSettings } from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
 import { button, layout, palette } from "./adminStyles";
@@ -12,6 +12,8 @@ const items = [
   { to: "vehicle-categories", label: "Categories", icon: Tags },
   { to: "vehicle-images", label: "Vehicle Images", icon: Image },
   { to: "users", label: "Users", icon: Users },
+  { to: "bookings", label: "Bookings", icon: CalendarCheck },
+  { to: "addons", label: "Add-ons", icon: Package },
 ];
 
 export default function AdminLayout() {
