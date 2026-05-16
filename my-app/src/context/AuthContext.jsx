@@ -15,8 +15,9 @@ export function AuthProvider({ children }) {
     return data;
   };
 
-  const signup = async (tenantSlug, email, password) => {
-    const { data } = await signupTenant(tenantSlug, email, password);
+  const signup = async (tenantSlug, signupData) => {
+    const { data } = await signupTenant(tenantSlug, signupData);
+    localStorage.setItem("last_tenant_slug", tenantSlug)
     saveAuth(data);
     setUser(data);
     return data;
