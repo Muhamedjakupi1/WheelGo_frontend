@@ -6,9 +6,10 @@ import {
   updateAdminBooking,
 } from "../../api/adminApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount } from "../../utils/currency";
 import AdminConfirmModal from "./AdminConfirmModal";
-import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
+import { badge, button, card, emptyState, form, layout, palette, table, getReadHeavyTwoColumnLayout } from "./adminStyles";
 
 const BOOKING_STATUSES = ["PENDING", "CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED"];
 
@@ -45,6 +46,8 @@ const statusTone = (status) => {
 
 export default function TenantAdminBookings() {
   const { settings: tenantSettings } = useTenantSettings();
+  const isCompact = useIsCompactLayout(1200);
+  const isMedium = useIsCompactLayout(1500);
   const [bookings, setBookings] = useState([]);
   const [selectedId, setSelectedId] = useState(null);
   const [decision, setDecision] = useState(initialDecision);
@@ -160,6 +163,7 @@ export default function TenantAdminBookings() {
   };
 
   const pendingCount = bookings.filter((booking) => booking.status === "PENDING").length;
+  const bookingWorkspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isMedium);
 
   return (
     <div style={layout.contentStack}>
@@ -176,7 +180,7 @@ export default function TenantAdminBookings() {
         </div>
       </section>
 
-      <section style={grid.two}>
+      <section style={bookingWorkspaceGrid}>
         <article style={card.panel}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
             <div>

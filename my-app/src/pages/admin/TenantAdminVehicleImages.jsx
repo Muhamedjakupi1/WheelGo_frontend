@@ -6,7 +6,8 @@ import {
   uploadAdminVehicleImage,
   updateAdminVehicleImage,
 } from "../../api/adminApi";
-import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
+import { badge, button, card, emptyState, form, layout, palette, table, getReadHeavyTwoColumnLayout } from "./adminStyles";
 import AdminConfirmModal from "./AdminConfirmModal";
 import { resolveMediaUrl } from "../../utils/media";
 
@@ -20,6 +21,8 @@ function fileNameFromStoredPath(path) {
 }
 
 export default function TenantAdminVehicleImages() {
+  const isCompact = useIsCompactLayout(1100);
+  const isWide = useIsCompactLayout(1500);
   const [images, setImages] = useState([]);
   const [vehicles, setVehicles] = useState([]);
   const [formData, setFormData] = useState(defaultForm);
@@ -34,6 +37,7 @@ export default function TenantAdminVehicleImages() {
   const [confirmError, setConfirmError] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
+  const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
   const loadData = async () => {
     try {
@@ -162,7 +166,7 @@ export default function TenantAdminVehicleImages() {
         <p style={card.subtitle}>Upload photos from your computer. Only the stored file path is saved in the database.</p>
       </section>
 
-      <section style={grid.two}>
+      <section style={workspaceGrid}>
         <article style={card.panel}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "18px" }}>
             <div>

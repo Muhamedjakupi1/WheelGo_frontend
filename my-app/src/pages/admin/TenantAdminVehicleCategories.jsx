@@ -5,8 +5,9 @@ import {
   getAdminVehicleCategories,
   updateAdminVehicleCategory,
 } from "../../api/adminApi";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import AdminConfirmModal from "./AdminConfirmModal";
-import { badge, button, card, emptyState, form, grid, layout, palette, table } from "./adminStyles";
+import { badge, button, card, emptyState, form, layout, palette, table, getReadHeavyTwoColumnLayout } from "./adminStyles";
 
 const defaultForm = { name: "", description: "" };
 const CATEGORY_IN_USE_MESSAGE =
@@ -18,6 +19,8 @@ const CATEGORY_DELETE_AUTH_FALLBACK_MESSAGES = new Set([
 ]);
 
 export default function TenantAdminVehicleCategories() {
+  const isCompact = useIsCompactLayout(1100);
+  const isWide = useIsCompactLayout(1500);
   const [categories, setCategories] = useState([]);
   const [formData, setFormData] = useState(defaultForm);
   const [selectedId, setSelectedId] = useState(null);
@@ -28,6 +31,7 @@ export default function TenantAdminVehicleCategories() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState("");
+  const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
 
@@ -142,7 +146,7 @@ export default function TenantAdminVehicleCategories() {
         </p>
       </section>
 
-      <section style={grid.two}>
+      <section style={workspaceGrid}>
         <article style={card.panel}>
           <div
             style={{

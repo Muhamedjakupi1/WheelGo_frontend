@@ -76,6 +76,18 @@ export const grid = {
   },
 };
 
+export const getReadHeavyTwoColumnLayout = (isCompact, isWide = false) =>
+  isCompact
+    ? grid.two
+    : {
+        display: "grid",
+        gridTemplateColumns: isWide
+          ? "minmax(0, 1.7fr) minmax(320px, 0.85fr)"
+          : "minmax(0, 1.45fr) minmax(320px, 0.95fr)",
+        gap: "24px",
+        alignItems: "start",
+      };
+
 export const form = {
   stack: { display: "flex", flexDirection: "column", gap: "16px" },
   row: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))", gap: "14px" },

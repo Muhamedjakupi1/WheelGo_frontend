@@ -20,6 +20,7 @@ import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { createBooking } from "../../api/bookingApi";
 import { getAddons } from "../../api/addonApi";
 import { getVehicles } from "../../api/vehicleApi";
+import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount, formatCurrencyPerDay } from "../../utils/currency";
 import { resolveMediaUrl } from "../../utils/media";
 
@@ -219,11 +220,7 @@ export default function TenantUserDashboard() {
           </h2>
           <p style={ds.heroText}>
             {heroVehicle
-              ? `${heroVehicle.categoryName || "Premium vehicle"} ? ${
-                  heroVehicle.year
-                } ? ${formatCurrencyPerDay(heroVehicle.dailyRate, tenantSettings)} ? ${
-                  heroVehicle.locationName || "Available now"
-                }`
+              ? buildHeroSummary(heroVehicle, tenantSettings)
               : "Choose from premium vehicles with fast delivery."}
           </p>
           {heroVehicle ? (
@@ -368,6 +365,19 @@ function VehicleDetailsModal({
   onBookingSaved,
   onClose,
 }) {
+  const isCompactBooking = useIsCompactLayout(1100);
+  const isWideBooking = useIsCompactLayout(1450);
+  const bookingModalGrid = isCompactBooking
+    ? ds.modalContent
+    : {
+        display: "grid",
+        gridTemplateColumns: isWideBooking
+          ? "minmax(0, 1.7fr) minmax(340px, 0.85fr)"
+          : "minmax(0, 1.45fr) minmax(320px, 0.95fr)",
+        gap: "24px",
+        alignItems: "start",
+      };
+
   const name = `${vehicle.make} ${vehicle.model}`;
   const galleryImages = useMemo(() => {
     const rawImages = [
@@ -419,6 +429,7 @@ function VehicleDetailsModal({
   const finalAmount = baseAmount + addonsAmount;
   const today = getTodayDateString();
   const isAvailable = vehicle.status === "AVAILABLE";
+  const unavailableLabel = vehicle.statusMessage || "Unavailable";
 
   const showPreviousImage = () => {
     setActiveImageIndex((current) =>
@@ -509,7 +520,7 @@ function VehicleDetailsModal({
           </button>
         </div>
 
-        <div style={ds.modalContent}>
+        <div style={bookingModalGrid}>
           <div style={ds.galleryWrap}>
             <div style={ds.modalImageFrame}>
               <img src={imageUrl} alt={name} style={ds.modalImage} />
@@ -719,6 +730,7 @@ function VehicleDetailsModal({
                         label={addon.name || "Add-on"}
                         description={addon.description}
                         price={addon.price}
+                        currencySettings={currencySettings}
                         available={addon.quantity}
                         type={addon.type}
                         value={Number(addonQuantities[addon.id] || 0)}
@@ -933,6 +945,18 @@ function buildNotifications(email, heroVehicle, selectedLocation) {
         : "Vehicles will appear here once the fleet is available.",
     },
   ];
+}
+
+function buildHeroSummary(vehicle, currencySettings) {
+  return [
+    vehicle.categoryName || "Vehicle",
+    vehicle.seats ? `${vehicle.seats} seats` : null,
+    vehicle.year || null,
+    formatCurrencyPerDay(vehicle.dailyRate, currencySettings),
+    vehicle.locationName || "Location not set",
+  ]
+    .filter(Boolean)
+    .join(" - ");
 }
 
 function formatEnumLabel(value) {
