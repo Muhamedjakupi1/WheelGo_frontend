@@ -3,6 +3,7 @@ import { Trash2 } from "lucide-react";
 import { deleteAdminUser, getAdminUsers, updateAdminUser } from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
+import { isValidPassword, PASSWORD_RULE_MESSAGE } from "../../utils/passwordValidation";
 import AdminConfirmModal from "./AdminConfirmModal";
 import { badge, button, card, emptyState, form, layout, palette, table, getReadHeavyTwoColumnLayout } from "./adminStyles";
 
@@ -85,6 +86,11 @@ export default function TenantAdminUsers() {
       };
 
       if (formData.password) {
+        if (!isValidPassword(formData.password)) {
+          setError(PASSWORD_RULE_MESSAGE);
+          setSaving(false);
+          return;
+        }
         payload.password = formData.password;
       }
 
@@ -213,7 +219,14 @@ export default function TenantAdminUsers() {
 
               <div style={form.field}>
                 <label style={form.label}>New Password</label>
-                <input style={form.input} type="password" value={formData.password} onChange={(e) => setFormData({ ...formData, password: e.target.value })} placeholder="Leave blank to keep current password" />
+                <input
+                  style={form.input}
+                  type="password"
+                  value={formData.password}
+                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                  placeholder="Leave blank to keep current password"
+                  title={PASSWORD_RULE_MESSAGE}
+                />
               </div>
 
               <div style={form.field}>
