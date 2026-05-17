@@ -428,7 +428,9 @@ function VehicleDetailsModal({
   }, 0);
   const finalAmount = baseAmount + addonsAmount;
   const today = getTodayDateString();
-  const canStartBooking = vehicle.status !== "MAINTENANCE" && vehicle.status !== "INACTIVE";
+  const maintenanceAvailableFrom = vehicle.maintenanceUntil || "";
+  const startDateMin = maintenanceAvailableFrom && maintenanceAvailableFrom > today ? maintenanceAvailableFrom : today;
+  const canStartBooking = vehicle.status !== "INACTIVE";
   const unavailableLabel = vehicle.statusMessage || "Unavailable";
 
   const showPreviousImage = () => {
@@ -609,6 +611,12 @@ function VehicleDetailsModal({
 
             {panelMode === "details" ? (
               <>
+                {vehicle.status === "MAINTENANCE" && vehicle.statusMessage ? (
+                  <div style={{ ...ds.infoBannerCompact, marginBottom: "18px" }}>
+                    {vehicle.statusMessage}. You can still book it for dates starting on or after that date.
+                  </div>
+                ) : null}
+
                 <div style={ds.modalGrid}>
                   <DetailRow
                     icon={<CalendarDays size={16} />}
@@ -669,6 +677,12 @@ function VehicleDetailsModal({
                   </div>
                 )}
 
+                {canStartBooking && vehicle.status === "MAINTENANCE" && vehicle.statusMessage ? (
+                  <div style={ds.infoBannerCompact}>
+                    {vehicle.statusMessage}. Bookings starting on or after that date are allowed.
+                  </div>
+                ) : null}
+
                 {saveMessage.text && (
                   <div
                     style={
@@ -686,7 +700,7 @@ function VehicleDetailsModal({
                     <span style={ds.fieldLabel}>Start Date</span>
                     <input
                       type="date"
-                      min={today}
+                      min={startDateMin}
                       value={startDate}
                       onChange={(e) => setStartDate(e.target.value)}
                       style={ds.input}
@@ -697,7 +711,7 @@ function VehicleDetailsModal({
                     <span style={ds.fieldLabel}>End Date</span>
                     <input
                       type="date"
-                      min={startDate || today}
+                      min={startDate || startDateMin}
                       value={endDate}
                       onChange={(e) => setEndDate(e.target.value)}
                       style={ds.input}
@@ -1512,6 +1526,13 @@ const ds = {
     background: "rgba(127, 29, 29, 0.25)",
     color: "#fecaca",
     border: "1px solid #7f1d1d",
+    borderRadius: "14px",
+    padding: "12px 14px",
+  },
+  infoBannerCompact: {
+    background: "rgba(30, 64, 175, 0.18)",
+    color: "#bfdbfe",
+    border: "1px solid rgba(96, 165, 250, 0.45)",
     borderRadius: "14px",
     padding: "12px 14px",
   },

@@ -35,7 +35,15 @@ const formatDate = (value) => {
 
 const toDateInputValue = (value) => {
   if (!value) return "";
-  return new Date(value).toISOString().split("T")[0];
+  if (typeof value === "string" && value.includes("T")) {
+    return value.split("T")[0];
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 };
 
 const statusTone = (status) => {
