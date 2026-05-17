@@ -428,7 +428,7 @@ function VehicleDetailsModal({
   }, 0);
   const finalAmount = baseAmount + addonsAmount;
   const today = getTodayDateString();
-  const isAvailable = vehicle.status === "AVAILABLE";
+  const canStartBooking = vehicle.status !== "MAINTENANCE" && vehicle.status !== "INACTIVE";
   const unavailableLabel = vehicle.statusMessage || "Unavailable";
 
   const showPreviousImage = () => {
@@ -444,7 +444,7 @@ function VehicleDetailsModal({
   };
 
   const canSaveBooking =
-    isAvailable &&
+    canStartBooking &&
     startDate &&
     endDate &&
     rentalDays > 0 &&
@@ -589,12 +589,12 @@ function VehicleDetailsModal({
                   type="button"
                   style={{
                     ...ds.primaryActionBtn,
-                    ...(isAvailable ? {} : ds.disabledActionBtn),
+                    ...(canStartBooking ? {} : ds.disabledActionBtn),
                   }}
-                  onClick={() => isAvailable && setPanelMode("book")}
-                  disabled={!isAvailable}
+                  onClick={() => canStartBooking && setPanelMode("book")}
+                  disabled={!canStartBooking}
                 >
-                  {isAvailable ? "Book" : unavailableLabel}
+                  {canStartBooking ? "Book" : unavailableLabel}
                 </button>
               ) : (
                 <button
@@ -661,7 +661,7 @@ function VehicleDetailsModal({
               </>
             ) : (
               <>
-                {!isAvailable && (
+                {!canStartBooking && (
                   <div style={ds.errorBannerCompact}>
                     This vehicle is currently{" "}
                     {formatEnumLabel(vehicle.status).toLowerCase()} and cannot be
