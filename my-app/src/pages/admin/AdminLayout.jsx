@@ -59,14 +59,17 @@ export default function AdminLayout() {
           ...layout.sidebar,
           ...(isCompact
             ? {
-                position: "static",
-                width: "100%",
-                inset: "auto",
-                borderRight: "none",
-                borderBottom: `1px solid ${palette.border}`,
-                padding: "18px 16px",
-              }
-            : {}),
+              position: "static",
+              width: "100%",
+              inset: "auto",
+              borderRight: "none",
+              borderBottom: `1px solid ${palette.border}`,
+              padding: "18px 16px",
+            }
+            : {
+              overflowY: "auto",
+              height: "100vh",
+            }),
         }}
       >
         <div style={layout.brand}>
@@ -81,7 +84,7 @@ export default function AdminLayout() {
           Signed in as <span style={{ color: palette.text, fontWeight: 600 }}>{user?.email}</span>
         </div>
 
-        <nav style={isCompact ? layout.navCompact : layout.nav}>
+        <nav style={isCompact ? layout.navCompact : { ...layout.nav, overflowY: "auto", flex: 1, minHeight: 0 }}>
           {items.map((item) => {
             const Icon = item.icon;
             return (
@@ -121,10 +124,10 @@ export default function AdminLayout() {
           ...mainStyle,
           ...(isCompact
             ? {
-                marginLeft: 0,
-                width: "100%",
-                padding: "20px 16px 28px",
-              }
+              marginLeft: 0,
+              width: "100%",
+              padding: "20px 16px 28px",
+            }
             : {}),
         }}
       >

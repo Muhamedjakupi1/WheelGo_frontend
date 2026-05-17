@@ -88,12 +88,16 @@ export default function TenantAdminDashboard() {
       <section style={grid.cards}>
         <article style={card.panel}>
           <h2 style={card.title}>Recommended Setup Order</h2>
-          <p style={card.subtitle}>This keeps admin data clean and avoids broken references.</p>
+          <p style={card.subtitle}>This follows the real tenant setup flow and keeps booking, vehicle, and maintenance data consistent.</p>
           <ol style={{ margin: "18px 0 0", paddingLeft: "20px", color: palette.text, lineHeight: 1.8 }}>
-            <li>Create vehicle categories first.</li>
-            <li>Create vehicles and assign them to categories.</li>
-            <li>Attach vehicle images and mark one as primary.</li>
-            <li>Review tenant users and adjust roles or activation status.</li>
+            <li>Create locations first so vehicles have a valid pickup and return point.</li>
+            <li>Create vehicle categories to keep inventory grouped cleanly.</li>
+            <li>Create vehicles and assign both category and location.</li>
+            <li>Upload vehicle images and mark one image as primary.</li>
+            <li>Configure add-ons before taking live bookings.</li>
+            <li>Review tenant users and keep admin access limited to the right accounts.</li>
+            <li>Use bookings to manage date changes, confirmations, and cancellations after inventory is ready.</li>
+            <li>Use maintenance records whenever a vehicle should be blocked until a specific available-again date.</li>
           </ol>
         </article>
 
