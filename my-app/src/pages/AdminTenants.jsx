@@ -9,6 +9,10 @@ import {
 import DeleteModal from "../components/DeleteModal";
 import CreateAndEditModal from "../components/CreateAndEditModal";
 import { useAuth } from "../context/AuthContext";
+import {
+    isValidPassword,
+    PASSWORD_RULE_MESSAGE,
+} from "../utils/passwordValidation";
 
 const PLAN_COLORS = {
     FREE: { bg: "#0f2a1a", color: "#22c55e", border: "#14532d" },
@@ -128,6 +132,12 @@ export default function AdminTenants() {
 
         try {
             if (modal === "create") {
+                if (!isValidPassword(form.adminPassword)) {
+                    setError(PASSWORD_RULE_MESSAGE);
+                    showAlert("error", PASSWORD_RULE_MESSAGE);
+                    return;
+                }
+
                 await createTenant({
                     name: form.name.trim(),
                     slug: slugify(form.slug),

@@ -194,6 +194,7 @@ export default function CreateAndEditModal({
                                             setForm({ ...form, adminPassword: e.target.value })
                                         }
                                         placeholder="Enter tenant admin password"
+                                        title="At least 8 characters, 1 uppercase letter and 1 number"
                                         required
                                     />
                                 </Field>
