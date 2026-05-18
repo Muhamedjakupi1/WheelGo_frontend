@@ -153,7 +153,7 @@ export default function TenantBookingPage() {
                       dateRange={formatDateRange(booking.startDate, booking.endDate)}
                       location={booking.locationName || "-"}
                       price={formatCurrencyAmount(booking.totalPrice, tenantSettings)}
-                      status={formatStatus(booking.status)}
+                      status={booking.status}
                       img={resolveMediaUrl(booking.vehicleImageUrl) || fallbackImage}
                     />
                   ))}
@@ -194,7 +194,7 @@ const BookingRow = ({ car, dateRange, location, price, status, img }) => (
     <td style={s.td}>{location}</td>
     <td style={s.td}>{price}</td>
     <td style={s.td}>
-      <span style={s.statusBadge}>{status}</span>
+      <span style={getStatusBadgeStyle(status)}>{formatStatus(status)}</span>
     </td>
     <td style={s.td}>
       <ChevronRight size={18} color="#64748b" />
@@ -225,6 +225,19 @@ function formatStatus(value) {
 
 function formatPrice(value) {
   return Number(value || 0).toFixed(2);
+}
+
+function getStatusBadgeStyle(status) {
+  if (status === "CANCELLED") {
+    return {
+      ...s.statusBadge,
+      background: "rgba(239, 68, 68, 0.14)",
+      color: "#f87171",
+      border: "1px solid rgba(248, 113, 113, 0.32)",
+    };
+  }
+
+  return s.statusBadge;
 }
 
 const s = {
