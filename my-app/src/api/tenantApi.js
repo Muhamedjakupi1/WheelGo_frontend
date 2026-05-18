@@ -6,8 +6,8 @@ export const updateTenant = (id, data) => http.patch(`/api/super-admin/tenants/$
 export const deleteTenant = (id)       => http.delete(`/api/super-admin/tenants/${id}`);
 export const getSupportedTenantCurrencies = () => http.get("/api/super-admin/tenants/currencies");
 
-export const startImpersonation = (tenantSlug, userId) =>
-  http.post(`/api/super-admin/impersonation/start/${tenantSlug}/${userId}`);
+export const startImpersonation = (tenantSlug) =>
+  http.post(`/api/super-admin/impersonation/start/${tenantSlug}`);
 
 export const stopImpersonation = () =>
   http.post("/api/super-admin/impersonation/stop");

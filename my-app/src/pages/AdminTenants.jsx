@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
     getAllTenants,
     createTenant,
@@ -46,7 +47,8 @@ const emptyCreateForm = {
 };
 
 export default function AdminTenants() {
-    const { logout } = useAuth();
+    const { logout, startImpersonation } = useAuth();
+    const navigate = useNavigate();
     const [isCompact, setIsCompact] = useState(() =>
         typeof window !== "undefined" ? window.innerWidth <= 960 : false
     );
@@ -60,6 +62,7 @@ export default function AdminTenants() {
     const [error, setError] = useState("");
     const [alert, setAlert] = useState({ type: "", message: "" });
     const [currencyOptions, setCurrencyOptions] = useState([]);
+    const [impersonatingTenantId, setImpersonatingTenantId] = useState(null);
 
     const showAlert = (type, message) => {
         setAlert({ type, message });
@@ -209,6 +212,24 @@ export default function AdminTenants() {
         }
     };
 
+    const handleStartImpersonation = async (tenant) => {
+        try {
+            setImpersonatingTenantId(tenant.id);
+            await startImpersonation(tenant.slug);
+            navigate(`/t/${tenant.slug}/admin`, { replace: true });
+        } catch (err) {
+            const message =
+                err.response?.data?.message ||
+                err.response?.data?.error ||
+                err.response?.data ||
+                "Failed to start impersonation.";
+
+            showAlert("error", message);
+        } finally {
+            setImpersonatingTenantId(null);
+        }
+    };
+
     const formatDate = (value) => {
         if (!value) return "-";
         return new Date(value).toLocaleString("en-GB", {
@@ -322,6 +343,18 @@ export default function AdminTenants() {
                                         <td style={s.td}>{formatDate(t.updatedAt)}</td>
                                         <td style={s.td}>
                                             <div style={s.actions}>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => handleStartImpersonation(t)}
+                                                    style={{
+                                                        ...s.impersonateBtn,
+                                                        ...(impersonatingTenantId === t.id ? s.actionBtnDisabled : {}),
+                                                        ...(!t.active ? s.actionBtnDisabled : {}),
+                                                    }}
+                                                    disabled={impersonatingTenantId === t.id || !t.active}
+                                                >
+                                                    {impersonatingTenantId === t.id ? "Starting..." : "Start impersonation"}
+                                                </button>
                                                 <button
                                                     type="button"
                                                     onClick={() => openEdit(t)}
@@ -575,6 +608,16 @@ const s = {
         fontWeight: "600",
         cursor: "pointer",
     },
+    impersonateBtn: {
+        background: "#0f2417",
+        border: "1px solid #1f5c36",
+        borderRadius: "6px",
+        color: "#4ade80",
+        padding: "6px 14px",
+        fontSize: "12px",
+        fontWeight: "600",
+        cursor: "pointer",
+    },
     deleteBtn: {
         background: "#1a0a0a",
         border: "1px solid #3f1a1a",
@@ -584,5 +627,9 @@ const s = {
         fontSize: "12px",
         fontWeight: "600",
         cursor: "pointer",
+    },
+    actionBtnDisabled: {
+        opacity: 0.6,
+        cursor: "not-allowed",
     },
 };
