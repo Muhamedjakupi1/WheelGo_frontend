@@ -10,12 +10,17 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     Array.isArray(allowedRoles) &&
     allowedRoles.length === 1 &&
     allowedRoles[0] === "SUPER_ADMIN";
+  const isSuperAdminImpersonating =
+    user?.isImpersonating === true && user?.originalRole === "SUPER_ADMIN";
 
   if (!user) {
     return <Navigate to={isSuperAdminOnlyRoute ? SUPER_ADMIN_LOGIN_PATH : "/login"} replace />;
   }
 
   if (allowedRoles && !allowedRoles.includes(user.role)) {
+    if (isSuperAdminOnlyRoute && isSuperAdminImpersonating && user.tenantSlug) {
+      return <Navigate to={`/t/${user.tenantSlug}/admin`} replace />;
+    }
     return <Navigate to={isSuperAdminOnlyRoute ? SUPER_ADMIN_LOGIN_PATH : "/login"} replace />;
   }
 

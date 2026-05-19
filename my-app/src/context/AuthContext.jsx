@@ -1,6 +1,7 @@
 import { createContext, useContext, useState } from "react";
-import { saveAuth, getAuth, clearAuth, getTenantSlug } from "../utils/auth";
+import { saveAuth, getAuth, clearAuth, getTenantSlug, normalizeAuth } from "../utils/auth";
 import { login, signupTenant } from "../api/authApi";
+import { startImpersonation as startImpersonationRequest, stopImpersonation as stopImpersonationRequest } from "../api/tenantApi";
 
 const AuthContext = createContext(null);
 
@@ -9,18 +10,20 @@ export function AuthProvider({ children }) {
 
   const signIn = async (tenantSlug, email, password) => {
     const { data } = await login(tenantSlug, email, password);
+    const normalized = normalizeAuth(data);
     localStorage.setItem("last_tenant_slug", tenantSlug)
-    saveAuth(data);
-    setUser(data);
-    return data;
+    saveAuth(normalized);
+    setUser(normalized);
+    return normalized;
   };
 
   const signup = async (tenantSlug, signupData) => {
     const { data } = await signupTenant(tenantSlug, signupData);
+    const normalized = normalizeAuth(data);
     localStorage.setItem("last_tenant_slug", tenantSlug)
-    saveAuth(data);
-    setUser(data);
-    return data;
+    saveAuth(normalized);
+    setUser(normalized);
+    return normalized;
   };
 
   const logout = () => {
@@ -35,8 +38,25 @@ export function AuthProvider({ children }) {
   };
 
   const updateAuth = (data) => {
-    saveAuth(data);
-    setUser(data);
+    const normalized = normalizeAuth(data);
+    saveAuth(normalized);
+    setUser(normalized);
+  };
+
+  const startImpersonation = async (tenantSlug) => {
+    const { data } = await startImpersonationRequest(tenantSlug);
+    const normalized = normalizeAuth(data);
+    saveAuth(normalized);
+    setUser(normalized);
+    return normalized;
+  };
+
+  const stopImpersonation = async () => {
+    const { data } = await stopImpersonationRequest();
+    const normalized = normalizeAuth(data);
+    saveAuth(normalized);
+    setUser(normalized);
+    return normalized;
   };
 
   return (
@@ -47,10 +67,15 @@ export function AuthProvider({ children }) {
         signIn,
         signup,
         updateAuth,
+        startImpersonation,
+        stopImpersonation,
         isLoggedIn: !!user,
         isSuperAdmin: user?.role === "SUPER_ADMIN",
         isAdmin: user?.role === "ADMIN",
         isCustomer: user?.role === "CUSTOMER",
+        isImpersonating: user?.isImpersonating === true,
+        isSuperAdminImpersonating:
+          user?.isImpersonating === true && user?.originalRole === "SUPER_ADMIN",
       }}
     >
       {children}

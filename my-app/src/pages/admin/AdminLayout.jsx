@@ -20,9 +20,11 @@ const items = [
 
 export default function AdminLayout() {
   const { tenantSlug } = useParams();
-  const { user, logout } = useAuth();
+  const { user, logout, stopImpersonation, isImpersonating } = useAuth();
   const navigate = useNavigate();
   const [themeColor, setThemeColor] = useState(null);
+  const [impersonationError, setImpersonationError] = useState("");
+  const [stoppingImpersonation, setStoppingImpersonation] = useState(false);
   const isCompact = useIsCompactLayout(1100);
 
   useEffect(() => {
@@ -48,6 +50,24 @@ export default function AdminLayout() {
   const handleLogout = async () => {
     await logout();
     navigate(`/login/${tenantSlug}`);
+  };
+
+  const handleStopImpersonation = async () => {
+    try {
+      setStoppingImpersonation(true);
+      setImpersonationError("");
+      await stopImpersonation();
+      navigate("/superadmin/tenants", { replace: true });
+    } catch (err) {
+      setImpersonationError(
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.response?.data ||
+        "Failed to stop impersonation."
+      );
+    } finally {
+      setStoppingImpersonation(false);
+    }
   };
 
   const shellStyle = themeColor ? { ...layout.shell, background: themeColor } : layout.shell;
@@ -132,6 +152,46 @@ export default function AdminLayout() {
             : {}),
         }}
       >
+        {isImpersonating && (
+          <section
+            style={{
+              marginBottom: "20px",
+              padding: "16px 18px",
+              borderRadius: "18px",
+              border: "1px solid rgba(74, 222, 128, 0.28)",
+              background: "linear-gradient(135deg, rgba(21, 128, 61, 0.22), rgba(15, 23, 42, 0.82))",
+              display: "flex",
+              justifyContent: "space-between",
+              gap: "16px",
+              alignItems: "center",
+              flexWrap: "wrap",
+            }}
+          >
+            <div>
+              <div style={{ color: palette.text, fontWeight: 800 }}>Impersonation active</div>
+              <div style={{ color: palette.muted, marginTop: "4px", fontSize: "0.92rem" }}>
+                You are acting as this tenant&apos;s admin. All changes in this area affect tenant <strong style={{ color: palette.text }}>{tenantSlug}</strong>.
+              </div>
+              {impersonationError && (
+                <div style={{ color: palette.danger, marginTop: "8px", fontSize: "0.9rem" }}>{impersonationError}</div>
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleStopImpersonation}
+              disabled={stoppingImpersonation}
+              style={{
+                ...button.secondary,
+                minWidth: "180px",
+                opacity: stoppingImpersonation ? 0.7 : 1,
+                cursor: stoppingImpersonation ? "not-allowed" : "pointer",
+              }}
+            >
+              {stoppingImpersonation ? "Stopping..." : "Stop impersonation"}
+            </button>
+          </section>
+        )}
         <Outlet />
       </main>
     </div>
