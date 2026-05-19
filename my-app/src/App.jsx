@@ -8,6 +8,7 @@ import AdminTenants from "./pages/AdminTenants";
 import UserLayout from "./pages/user/UserLayout";
 import TenantUserDashboard from "./pages/user/UserDashboard";
 import TenantUserBooking from "./pages/user/UserBooking";
+import TenantUserPayments from "./pages/user/UserPayments";
 import TenantUserSettings from "./pages/user/UserSettings";
 import TenantUserProfile from "./pages/user/UserPorfile";
 import TenantUserSupport from "./pages/user/UserSupport";
@@ -19,6 +20,7 @@ import TenantAdminVehicleCategories from "./pages/admin/TenantAdminVehicleCatego
 import TenantAdminVehicleImages from "./pages/admin/TenantAdminVehicleImages";
 import TenantAdminUsers from "./pages/admin/TenantAdminUsers";
 import TenantAdminBookings from "./pages/admin/TenantAdminBookings";
+import TenantAdminPayments from "./pages/admin/TenantAdminPayments";
 import TenantAdminAddons from "./pages/admin/TenantAdminAddons";
 import TenantAdminMaintenance from "./pages/admin/TenantAdminMaintenance";
 
@@ -53,6 +55,7 @@ export default function App() {
         <Route path="vehicle-images" element={<TenantAdminVehicleImages />} />
         <Route path="users" element={<TenantAdminUsers />} />
         <Route path="bookings" element={<TenantAdminBookings />} />
+        <Route path="payments" element={<TenantAdminPayments />} />
         <Route path="addons" element={<TenantAdminAddons />} />
         <Route path="maintenance" element={<TenantAdminMaintenance />} />
       </Route>
@@ -67,6 +70,7 @@ export default function App() {
       >
         <Route path="app" element={<TenantUserDashboard />} />
         <Route path="bookings" element={<TenantUserBooking />} />
+        <Route path="payments" element={<TenantUserPayments />} />
         <Route path="settings" element={<TenantUserSettings />} />
         <Route path="profile" element={<TenantUserProfile />} />
         <Route path="support" element={<TenantUserSupport />} />
