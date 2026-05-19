@@ -31,15 +31,16 @@ export default function TenantAdminVehicleCategories() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
 
-  const loadData = async () => {
+  const loadData = async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
-      const response = await getAdminVehicleCategories();
+      const response = await getAdminVehicleCategories(keyword);
       setCategories(response.data);
       setSuccess("Categories loaded successfully.");
     } catch (err) {
@@ -51,8 +52,12 @@ export default function TenantAdminVehicleCategories() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      loadData(searchTerm.trim());
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const resetForm = () => {
     setSelectedId(null);
@@ -164,6 +169,16 @@ export default function TenantAdminVehicleCategories() {
             <div style={badge("success")}>
               {loading ? "Loading" : "Ready"}
             </div>
+          </div>
+
+          <div style={{ marginBottom: "18px" }}>
+            <input
+              style={{ ...form.input, width: "100%", maxWidth: "350px" }}
+              type="text"
+              placeholder="Search categories..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           {loading ? (

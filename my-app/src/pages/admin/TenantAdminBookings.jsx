@@ -64,17 +64,18 @@ export default function TenantAdminBookings() {
   const [deleteState, setDeleteState] = useState({ open: false, id: null, label: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const selectedBooking = useMemo(
     () => bookings.find((booking) => booking.id === selectedId) || bookings.find((booking) => booking.status === "PENDING") || bookings[0],
     [bookings, selectedId]
   );
 
-  const loadBookings = async () => {
+  const loadBookings = async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
-      const response = await getAdminBookings();
+      const response = await getAdminBookings(keyword);
       setBookings(Array.isArray(response.data) ? response.data : []);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to load bookings.");
@@ -84,8 +85,12 @@ export default function TenantAdminBookings() {
   };
 
   useEffect(() => {
-    loadBookings();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      loadBookings(searchTerm.trim());
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   useEffect(() => {
     if (!selectedBooking) return;
@@ -181,7 +186,7 @@ export default function TenantAdminBookings() {
             <h1 style={{ margin: 0, fontSize: "1.9rem", color: palette.text }}>Bookings</h1>
             <p style={card.subtitle}>Review requests, move booking dates, and set the status to any lifecycle state.</p>
           </div>
-          <button type="button" onClick={loadBookings} style={{ ...button.secondary, display: "inline-flex", alignItems: "center", gap: "10px" }}>
+          <button type="button" onClick={() => loadBookings(searchTerm.trim())} style={{ ...button.secondary, display: "inline-flex", alignItems: "center", gap: "10px" }}>
             <RefreshCw size={16} />
             Refresh
           </button>
@@ -196,6 +201,16 @@ export default function TenantAdminBookings() {
               <p style={card.subtitle}>{pendingCount} pending approvals</p>
             </div>
             <div style={badge("default")}>{loading ? "Loading" : `${bookings.length} records`}</div>
+          </div>
+
+          <div style={{ marginBottom: "18px" }}>
+            <input
+              style={{ ...form.input, width: "100%", maxWidth: "350px" }}
+              type="text"
+              placeholder="Search bookings..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           {loading ? (

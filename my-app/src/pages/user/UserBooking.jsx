@@ -6,6 +6,7 @@ import {
   ChevronRight,
   MapPin,
   Receipt,
+  Search,
 } from "lucide-react";
 import { getMyBookings } from "../../api/bookingApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
@@ -22,11 +23,13 @@ export default function TenantBookingPage() {
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
-    const loadBookings = async () => {
+    const loadBookings = async (keyword = "") => {
       try {
-        const response = await getMyBookings();
+        setLoading(true);
+        const response = await getMyBookings(keyword);
         setBookings(Array.isArray(response.data) ? response.data : []);
         setError("");
       } catch (err) {
@@ -41,8 +44,12 @@ export default function TenantBookingPage() {
       }
     };
 
-    loadBookings();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      loadBookings(searchTerm.trim());
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const activeBooking = bookings[0] || null;
   const bookingHistory = bookings.slice(0, 10);
@@ -59,6 +66,16 @@ export default function TenantBookingPage() {
           </div>
 
           <div style={s.filterActions}>
+            <div style={s.searchBox}>
+              <Search size={18} />
+              <input
+                type="text"
+                placeholder="Search bookings..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={s.searchInput}
+              />
+            </div>
             <div style={s.infoPill}>
               <Receipt size={18} />
               <span>{bookings.length} total bookings</span>
@@ -246,6 +263,8 @@ const s = {
   topbar: { display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "40px", gap: "20px", flexWrap: "wrap" },
   greeting: { fontSize: "32px", fontWeight: "700", margin: 0, color: "#fff" },
   filterActions: { display: "flex", gap: "15px", flexWrap: "wrap" },
+  searchBox: { display: "flex", alignItems: "center", gap: "8px", background: "#161f2e", padding: "10px 14px", borderRadius: "10px", border: "1px solid #2d3748", color: "#cbd5e1" },
+  searchInput: { width: "190px", background: "transparent", border: "none", outline: "none", color: "#fff" },
   infoPill: { display: "flex", alignItems: "center", gap: "8px", background: "#161f2e", padding: "10px 20px", borderRadius: "10px", border: "1px solid #2d3748", color: "#cbd5e1" },
   datePicker: { display: "flex", alignItems: "center", gap: "8px", background: "#3b82f6", padding: "10px 20px", borderRadius: "10px", color: "#fff" },
   errorBanner: { background: "rgba(127, 29, 29, 0.25)", color: "#fecaca", border: "1px solid #7f1d1d", borderRadius: "14px", padding: "12px 14px", marginBottom: "20px" },

@@ -21,6 +21,7 @@ export default function TenantAdminUsers() {
   const [deleteState, setDeleteState] = useState({ open: false, id: null, label: "" });
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
   const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
   const roleOptions = useMemo(
@@ -33,11 +34,11 @@ export default function TenantAdminUsers() {
     [users, selectedId]
   );
 
-  const loadData = async () => {
+  const loadData = async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
-      const response = await getAdminUsers();
+      const response = await getAdminUsers(keyword);
       setUsers(Array.isArray(response.data) ? response.data : []);
       setSuccess("");
     } catch (err) {
@@ -49,8 +50,12 @@ export default function TenantAdminUsers() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      loadData(searchTerm.trim());
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const resetForm = () => {
     setSelectedId(null);
@@ -152,6 +157,16 @@ export default function TenantAdminUsers() {
               <p style={card.subtitle}>{users.length} records</p>
             </div>
             <div style={badge("danger")}>{loading ? "Loading" : "Access control"}</div>
+          </div>
+
+          <div style={{ marginBottom: "18px" }}>
+            <input
+              style={{ ...form.input, width: "100%", maxWidth: "350px" }}
+              type="text"
+              placeholder="Search users..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           {loading ? (
