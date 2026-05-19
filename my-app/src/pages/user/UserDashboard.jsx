@@ -280,8 +280,6 @@ export default function TenantUserDashboard() {
         <VehicleDetailsModal
           vehicle={detailsVehicle}
           currencySettings={tenantSettings}
-          tenantSlug={tenantSlug}
-          userEmail={user?.email}
           onBookingSaved={() => {
             setDetailsVehicle(null);
             navigate(`/t/${tenantSlug}/payments`);
@@ -352,8 +350,6 @@ function CarCard({ vehicle, onDetails, currencySettings }) {
 function VehicleDetailsModal({
   vehicle,
   currencySettings,
-  tenantSlug,
-  userEmail,
   onBookingSaved,
   onClose,
 }) {
@@ -1021,7 +1017,7 @@ function PriceLine({ label, value }) {
   );
 }
 
-function AddonQuantityRow({ label, description, price, available, type, value, onChange, currencySettings }) {
+function AddonQuantityRow({ label, price, available, value, onChange, currencySettings }) {
   const stock = Number(available ?? 0);
 
   const updateValue = (nextValue) => {
@@ -1174,10 +1170,6 @@ function calculateRentalDays(startDate, endDate) {
   const diff = Math.round((end - start) / msPerDay);
   if (isNaN(diff) || diff < 0) return 0;
   return Math.max(diff + 1, 1);
-}
-
-function formatPrice(value) {
-  return Number(value || 0).toFixed(2);
 }
 
 function onlyDigits(value) {

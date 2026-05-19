@@ -1,10 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Outlet, NavLink, useParams, useNavigate } from "react-router-dom";
-<<<<<<< Updated upstream
-import { LayoutGrid, Clock, Settings, User, Headphones, LogOut } from "lucide-react";
-=======
 import { LayoutGrid, Clock, Settings, User, Headphones, LogOut, CreditCard } from "lucide-react";
->>>>>>> Stashed changes
 import { useAuth } from "../../context/AuthContext";
 
 export default function UserLayout() {

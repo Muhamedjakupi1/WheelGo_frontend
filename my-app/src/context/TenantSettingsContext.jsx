@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useMemo, useState } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { getCurrentTenantSettings } from "../api/tenantSettingsApi";
 import { useAuth } from "./AuthContext";
 import { resolveCurrencySettings } from "../utils/currency";
@@ -14,7 +14,7 @@ export function TenantSettingsProvider({ children }) {
   const [settings, setSettings] = useState(resolveCurrencySettings());
   const [loading, setLoading] = useState(false);
 
-  const refreshSettings = async () => {
+  const refreshSettings = useCallback(async () => {
     if (!isLoggedIn || isSuperAdmin || !user?.tenantSlug) {
       setSettings(resolveCurrencySettings());
       return;
@@ -29,11 +29,11 @@ export function TenantSettingsProvider({ children }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [isLoggedIn, isSuperAdmin, user?.tenantSlug]);
 
   useEffect(() => {
     refreshSettings();
-  }, [isLoggedIn, isSuperAdmin, user?.tenantSlug]);
+  }, [refreshSettings]);
 
   const value = useMemo(
     () => ({
@@ -41,7 +41,7 @@ export function TenantSettingsProvider({ children }) {
       loading,
       refreshSettings,
     }),
-    [settings, loading]
+    [settings, loading, refreshSettings]
   );
 
   return (
@@ -51,4 +51,5 @@ export function TenantSettingsProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useTenantSettings = () => useContext(TenantSettingsContext);

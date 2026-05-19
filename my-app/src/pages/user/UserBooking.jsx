@@ -8,11 +8,8 @@ import {
   CreditCard,
   MapPin,
   Receipt,
-<<<<<<< Updated upstream
   Search,
-=======
   X,
->>>>>>> Stashed changes
 } from "lucide-react";
 import { cancelMyBooking, getMyBookings } from "../../api/bookingApi";
 import { payForBooking } from "../../api/paymentApi";
@@ -34,7 +31,6 @@ export default function TenantBookingPage() {
   const [paymentBooking, setPaymentBooking] = useState(null);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
-<<<<<<< Updated upstream
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -62,7 +58,6 @@ export default function TenantBookingPage() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
-=======
   const [paymentForm, setPaymentForm] = useState({
     method: "CARD",
     cardholderName: "",
@@ -93,7 +88,6 @@ export default function TenantBookingPage() {
   useEffect(() => {
     loadBookings();
   }, []);
->>>>>>> Stashed changes
 
   const activeBooking = bookings[0] || null;
   const bookingHistory = bookings.slice(0, 10);
