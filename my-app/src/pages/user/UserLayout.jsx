@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { Outlet, NavLink, useParams, useNavigate } from "react-router-dom";
-import { LayoutGrid, Clock, Settings, MessageSquare, User, Headphones, LogOut } from "lucide-react";
+import { LayoutGrid, Clock, Settings, User, Headphones, LogOut } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 export default function UserLayout() {
   const { tenantSlug } = useParams();
-  const { logout, loading } = useAuth();
+  const { user, logout, loading } = useAuth();
   const navigate = useNavigate();
   const [isCompact, setIsCompact] = useState(() =>
     typeof window !== "undefined" ? window.innerWidth <= 960 : false
@@ -27,8 +27,16 @@ export default function UserLayout() {
   return (
     <div style={{ display: isCompact ? "block" : "flex", minHeight: "100vh", background: "#080a0f" }}>
       <aside style={{ ...s.sidebar, ...(isCompact ? s.sidebarCompact : {}) }}>
-        <div style={s.logoSection}>
-          <h2 style={s.logoText}>CarRent</h2>
+        <div style={s.brand}>
+          <div style={s.brandMark}>WG</div>
+          <div>
+            <div style={s.brandTitle}>WheelGo User</div>
+            <div style={s.brandSlug}>{tenantSlug}</div>
+          </div>
+        </div>
+
+        <div style={s.signedIn}>
+          Signed in as <span style={s.signedInEmail}>{user?.email}</span>
         </div>
 
         <nav style={{ ...s.nav, ...(isCompact ? s.navCompact : {}) }}>
@@ -84,8 +92,46 @@ const s = {
     height: "100vh",
     zIndex: 100,
   },
-  logoSection: { marginBottom: "50px", color: "white", paddingLeft: "10px" },
-  logoText: { fontSize: "24px", fontWeight: "bold", letterSpacing: "1px" },
+  brand: {
+    display: "flex",
+    alignItems: "center",
+    gap: "14px",
+    marginBottom: "28px",
+    padding: "0 8px",
+  },
+  brandMark: {
+    width: "44px",
+    height: "44px",
+    borderRadius: "14px",
+    background: "linear-gradient(135deg, #38bdf8, #2563eb)",
+    display: "grid",
+    placeItems: "center",
+    color: "#fff",
+    fontWeight: 900,
+    letterSpacing: "0.02em",
+  },
+  brandTitle: {
+    color: "#fff",
+    fontWeight: 800,
+    fontSize: "1.05rem",
+  },
+  brandSlug: {
+    color: "#94a3b8",
+    fontSize: "0.86rem",
+    marginTop: "4px",
+  },
+  signedIn: {
+    padding: "0 8px",
+    color: "#94a3b8",
+    fontSize: "0.84rem",
+    marginBottom: "34px",
+    lineHeight: 1.6,
+  },
+  signedInEmail: {
+    color: "#fff",
+    fontWeight: 700,
+    display: "block",
+  },
   nav: { display: "flex", flexDirection: "column", gap: "8px", flex: 1 },
   navCompact: { flexDirection: "row", flexWrap: "wrap" },
   mainWrapper: {

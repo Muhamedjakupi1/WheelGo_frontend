@@ -41,15 +41,16 @@ export default function TenantAdminLocations() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
   const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
-  const loadData = async () => {
+  const loadData = async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
-      const response = await getAdminLocations();
+      const response = await getAdminLocations(keyword);
       setLocations(response.data);
       setSuccess("Locations loaded successfully.");
     } catch (err) {
@@ -61,8 +62,12 @@ export default function TenantAdminLocations() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      loadData(searchTerm.trim());
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const resetForm = () => {
     setSelectedId(null);
@@ -187,6 +192,16 @@ export default function TenantAdminLocations() {
               <p style={card.subtitle}>{locations.length} records</p>
             </div>
             <div style={badge("default")}>{loading ? "Loading" : "Ready"}</div>
+          </div>
+
+          <div style={{ marginBottom: "18px" }}>
+            <input
+              style={{ ...form.input, width: "100%", maxWidth: "350px" }}
+              type="text"
+              placeholder="Search locations..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           {loading ? (

@@ -66,25 +66,26 @@ export default function TenantAdminVehicles() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
   const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
-  const loadData = async () => {
+  const loadData = async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
+
       const [vehiclesRes, categoriesRes, locationsRes] = await Promise.all([
-        getAdminVehicles(),
+        getAdminVehicles(keyword),
         getAdminVehicleCategories(),
         getAdminLocations(),
       ]);
+
       setVehicles(vehiclesRes.data);
       setCategories(categoriesRes.data);
       setLocations(locationsRes.data);
-      setSuccess("Vehicles, categories, and locations loaded successfully.");
     } catch (err) {
-      setSuccess("");
       setError(err.response?.data?.message || "Failed to load vehicles.");
     } finally {
       setLoading(false);
@@ -92,8 +93,16 @@ export default function TenantAdminVehicles() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      if (searchTerm.trim() !== "") {
+        loadData(searchTerm);
+      } else {
+        loadData();
+      }
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const resetForm = () => {
     setSelectedId(null);
@@ -151,11 +160,11 @@ export default function TenantAdminVehicles() {
 
       if (isEditing) {
         await updateAdminVehicle(selectedId, payload);
-        await loadData();
+        await loadData(searchTerm.trim());
         setSuccess("Vehicle updated successfully.");
       } else {
         await createAdminVehicle(payload);
-        await loadData();
+        await loadData(searchTerm.trim());
         setSuccess("Vehicle created successfully.");
       }
       resetForm();
@@ -189,7 +198,7 @@ export default function TenantAdminVehicles() {
       await deleteAdminVehicle(confirmDelete.id);
       if (selectedId === confirmDelete.id) resetForm();
       setConfirmDelete(null);
-      await loadData();
+      await loadData(searchTerm.trim());
       setSuccess("Vehicle deleted successfully.");
     } catch (err) {
       setSuccess("");
@@ -218,6 +227,16 @@ export default function TenantAdminVehicles() {
               <p style={card.subtitle}>{vehicles.length} records</p>
             </div>
             <div style={badge("default")}>{loading ? "Loading" : "Live list"}</div>
+          </div>
+
+          <div style={{ marginBottom: "18px" }}>
+            <input
+              style={{ ...form.input, width: "100%", maxWidth: "350px" }}
+              type="text"
+              placeholder="🔍 Kërko nga backend-i (model, targë...)"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           {loading ? (

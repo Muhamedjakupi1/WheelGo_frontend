@@ -35,15 +35,16 @@ export default function TenantAdminVehicleImages() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
   const workspaceGrid = getReadHeavyTwoColumnLayout(isCompact, isWide);
 
-  const loadData = async () => {
+  const loadData = async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
-      const [imagesRes, vehiclesRes] = await Promise.all([getAdminVehicleImages(), getAdminVehicles()]);
+      const [imagesRes, vehiclesRes] = await Promise.all([getAdminVehicleImages(null, keyword), getAdminVehicles()]);
       setImages(imagesRes.data);
       setVehicles(vehiclesRes.data);
       setSuccess("Vehicle images loaded successfully.");
@@ -56,8 +57,12 @@ export default function TenantAdminVehicleImages() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      loadData(searchTerm.trim());
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const resetForm = () => {
     setSelectedId(null);
@@ -174,6 +179,16 @@ export default function TenantAdminVehicleImages() {
               <p style={card.subtitle}>{images.length} records</p>
             </div>
             <div style={badge("warning")}>{loading ? "Loading" : "Media ready"}</div>
+          </div>
+
+          <div style={{ marginBottom: "18px" }}>
+            <input
+              style={{ ...form.input, width: "100%", maxWidth: "350px" }}
+              type="text"
+              placeholder="Search images by vehicle or file..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
 
           {loading ? (

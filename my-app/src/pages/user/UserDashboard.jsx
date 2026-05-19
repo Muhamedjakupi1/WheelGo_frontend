@@ -42,9 +42,10 @@ export default function TenantUserDashboard() {
   const [showNotifications, setShowNotifications] = useState(false);
 
   useEffect(() => {
-    const loadVehicles = async () => {
+    const loadVehicles = async (keyword = "") => {
       try {
-        const response = await getVehicles();
+        setLoading(true);
+        const response = await getVehicles(keyword);
         setVehicles(Array.isArray(response.data) ? response.data : []);
         setError("");
       } catch (err) {
@@ -55,8 +56,12 @@ export default function TenantUserDashboard() {
       }
     };
 
-    loadVehicles();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      loadVehicles(search.trim());
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [search]);
 
   const locations = useMemo(() => {
     const uniqueNames = [
@@ -89,27 +94,12 @@ export default function TenantUserDashboard() {
   }, [locations]);
 
   const filteredVehicles = useMemo(() => {
-    const normalizedSearch = search.trim().toLowerCase();
-
     return vehicles.filter((vehicle) => {
       const matchesLocation =
         !selectedLocation || vehicle.locationName === selectedLocation;
-      const haystack = [
-        vehicle.make,
-        vehicle.model,
-        vehicle.categoryName,
-        vehicle.locationName,
-        vehicle.plateNumber,
-      ]
-        .filter(Boolean)
-        .join(" ")
-        .toLowerCase();
-      const matchesSearch =
-        !normalizedSearch || haystack.includes(normalizedSearch);
-
-      return matchesLocation && matchesSearch;
+      return matchesLocation;
     });
-  }, [vehicles, selectedLocation, search]);
+  }, [vehicles, selectedLocation]);
 
   const heroVehicle = filteredVehicles[0] || vehicles[0] || null;
   const featuredVehicles = filteredVehicles.slice(0, 6);
