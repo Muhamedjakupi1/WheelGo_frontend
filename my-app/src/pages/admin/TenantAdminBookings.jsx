@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { RefreshCw, Trash2 } from "lucide-react";
 import {
   deleteAdminBooking,
@@ -20,8 +20,6 @@ const initialDecision = {
   note: "",
 };
 
-const formatPrice = (value) => Number(value || 0).toFixed(2);
-
 const formatDate = (value) => {
   if (!value) return "-";
   return new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString("en-GB", {
@@ -29,19 +27,6 @@ const formatDate = (value) => {
     month: "short",
     year: "numeric",
   });
-};
-
-const toDateInputValue = (value) => {
-  if (!value) return "";
-  if (typeof value === "string") {
-    return value.slice(0, 10);
-  }
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, "0");
-  const day = String(date.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
 };
 
 const statusTone = (status) => {
@@ -69,9 +54,6 @@ export default function TenantAdminBookings() {
     [bookings, selectedId]
   );
 
-<<<<<<< Updated upstream
-  const loadBookings = async (keyword = "") => {
-=======
   const bookingPricePreview = useMemo(() => {
     if (!selectedBooking) {
       return null;
@@ -93,8 +75,7 @@ export default function TenantAdminBookings() {
     };
   }, [selectedBooking, decision.addonCharge]);
 
-  const loadBookings = async () => {
->>>>>>> Stashed changes
+  const loadBookings = useCallback(async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
@@ -105,7 +86,7 @@ export default function TenantAdminBookings() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     const delayDebounceFn = setTimeout(() => {
@@ -113,7 +94,7 @@ export default function TenantAdminBookings() {
     }, 500);
 
     return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm]);
+  }, [loadBookings, searchTerm]);
 
   useEffect(() => {
     if (!selectedBooking) return;
@@ -124,7 +105,7 @@ export default function TenantAdminBookings() {
       addonCharge: "",
       note: "",
     });
-  }, [selectedBooking?.id]);
+  }, [selectedBooking]);
 
   const selectBooking = (booking) => {
     setSelectedId(booking.id);

@@ -9,6 +9,13 @@ const slugify = (value = "") =>
         .replace(/-+/g, "-")
         .replace(/^-+|-+$/g, "");
 
+const Field = ({ label, children, fullWidth = false }) => (
+    <div style={{ ...s.fieldGroup, ...(fullWidth ? s.fieldSpanFull : {}) }}>
+        <label style={s.label}>{label}</label>
+        {children}
+    </div>
+);
+
 export default function CreateAndEditModal({
     open,
     onClose,
@@ -30,13 +37,6 @@ export default function CreateAndEditModal({
     const handleSlugChange = (e) => {
         setForm({ ...form, slug: slugify(e.target.value) });
     };
-
-    const Field = ({ label, children, fullWidth = false }) => (
-        <div style={{ ...s.fieldGroup, ...(fullWidth ? s.fieldSpanFull : {}) }}>
-            <label style={s.label}>{label}</label>
-            {children}
-        </div>
-    );
 
     return (
         <div style={s.overlay} role="presentation" onClick={onClose}>

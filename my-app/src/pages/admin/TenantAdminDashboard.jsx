@@ -69,20 +69,24 @@ export default function TenantAdminDashboard() {
       {success && <section style={{ ...card.panel, borderColor: "rgba(52,211,153,0.35)", color: palette.success }}>{success}</section>}
 
       <section style={grid.cards}>
-        {statsConfig.map(({ key, label, icon: Icon, tone }) => (
-          <article key={key} style={card.panel}>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={badge(tone)}>{label}</div>
-              <Icon size={20} color={tone === "success" ? palette.success : tone === "warning" ? palette.warning : tone === "danger" ? palette.danger : palette.primary} />
-            </div>
-            <div style={{ marginTop: "18px", fontSize: "2rem", fontWeight: 800, color: palette.text }}>
-              {loading ? "--" : stats[key]}
-            </div>
-            <div style={{ marginTop: "6px", color: palette.muted, fontSize: "0.92rem" }}>
-              {label === "Users" ? "Accounts inside this tenant" : `Active ${label.toLowerCase()} records`}
-            </div>
-          </article>
-        ))}
+        {statsConfig.map((stat) => {
+          const StatIcon = stat.icon;
+
+          return (
+            <article key={stat.key} style={card.panel}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <div style={badge(stat.tone)}>{stat.label}</div>
+                <StatIcon size={20} color={stat.tone === "success" ? palette.success : stat.tone === "warning" ? palette.warning : stat.tone === "danger" ? palette.danger : palette.primary} />
+              </div>
+              <div style={{ marginTop: "18px", fontSize: "2rem", fontWeight: 800, color: palette.text }}>
+                {loading ? "--" : stats[stat.key]}
+              </div>
+              <div style={{ marginTop: "6px", color: palette.muted, fontSize: "0.92rem" }}>
+                {stat.label === "Users" ? "Accounts inside this tenant" : `Active ${stat.label.toLowerCase()} records`}
+              </div>
+            </article>
+          );
+        })}
       </section>
 
       <section style={grid.cards}>

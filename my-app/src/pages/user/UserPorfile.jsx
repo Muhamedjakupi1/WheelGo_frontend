@@ -46,6 +46,8 @@ export default function TenantUserProfile() {
 
   useEffect(() => {
     loadProfile();
+    // loadProfile is intentionally called once on mount to hydrate the profile form.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadProfile = async () => {
