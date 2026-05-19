@@ -13,12 +13,14 @@ import {
   Users,
   ChevronLeft,
   ChevronRight,
+  CreditCard,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { createBooking } from "../../api/bookingApi";
 import { getAddons } from "../../api/addonApi";
+import { payForBooking } from "../../api/paymentApi";
 import { getVehicles } from "../../api/vehicleApi";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount, formatCurrencyPerDay } from "../../utils/currency";
@@ -282,7 +284,7 @@ export default function TenantUserDashboard() {
           userEmail={user?.email}
           onBookingSaved={() => {
             setDetailsVehicle(null);
-            navigate(`/t/${tenantSlug}/bookings`);
+            navigate(`/t/${tenantSlug}/payments`);
           }}
           onClose={() => setDetailsVehicle(null)}
         />
@@ -387,8 +389,18 @@ function VehicleDetailsModal({
   const [addons, setAddons] = useState([]);
   const [addonQuantities, setAddonQuantities] = useState({});
   const [customRequest, setCustomRequest] = useState("");
+  const [createdBooking, setCreatedBooking] = useState(null);
+  const [paymentForm, setPaymentForm] = useState({
+    method: "CARD",
+    cardholderName: "",
+    cardNumber: "",
+    expiryMonth: "",
+    expiryYear: "",
+    cvv: "",
+  });
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
+  const [paying, setPaying] = useState(false);
 
   // Fetch addons nga API
   useEffect(() => {
@@ -441,6 +453,14 @@ function VehicleDetailsModal({
     endDate &&
     rentalDays > 0 &&
     new Date(endDate) >= new Date(startDate);
+  const canPay =
+    createdBooking &&
+    (paymentForm.method === "CASH" ||
+      (paymentForm.cardholderName.trim() &&
+        paymentForm.cardNumber.replace(/\D/g, "").length >= 12 &&
+        paymentForm.expiryMonth.trim() &&
+        paymentForm.expiryYear.trim() &&
+        paymentForm.cvv.replace(/\D/g, "").length >= 3));
 
   const handleSaveDraft = async () => {
     if (!canSaveBooking) {
@@ -455,7 +475,7 @@ function VehicleDetailsModal({
     setSaveMessage({ type: "", text: "" });
 
     try {
-      await createBooking({
+      const response = await createBooking({
         vehicleId: vehicle.id,
         startDate,
         endDate,
@@ -470,12 +490,10 @@ function VehicleDetailsModal({
 
       setSaveMessage({
         type: "success",
-        text: "Booking saved successfully. Redirecting to My Booking...",
+        text: "Booking saved. Complete the payment to finish.",
       });
-
-      window.setTimeout(() => {
-        onBookingSaved?.();
-      }, 400);
+      setCreatedBooking(response.data);
+      setPanelMode("payment");
     } catch (error) {
       console.error("Failed to save booking", error);
       setSaveMessage({
@@ -487,6 +505,51 @@ function VehicleDetailsModal({
       });
     } finally {
       setSaving(false);
+    }
+  };
+
+  const updatePaymentField = (field, value) => {
+    setPaymentForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handlePay = async () => {
+    if (!canPay || paying) return;
+
+    try {
+      setPaying(true);
+      setSaveMessage({ type: "", text: "" });
+      const response = await payForBooking({
+        bookingId: createdBooking.id,
+        method: paymentForm.method,
+        currency: currencySettings?.currency || "EUR",
+        cardholderName: paymentForm.cardholderName.trim(),
+        cardNumber: paymentForm.cardNumber,
+        expiryMonth: paymentForm.expiryMonth,
+        expiryYear: paymentForm.expiryYear,
+        cvv: paymentForm.cvv,
+      });
+
+      setSaveMessage({
+        type: "success",
+        text:
+          paymentForm.method === "CASH"
+            ? "Cash payment selected. Booking is pending until admin confirmation."
+            : `Payment completed. Invoice ${response.data?.invoiceNumber || ""} will be sent by email.`,
+      });
+
+      window.setTimeout(() => {
+        onBookingSaved?.();
+      }, 700);
+    } catch (error) {
+      setSaveMessage({
+        type: "error",
+        text:
+          error?.response?.data?.message ||
+          error?.response?.data?.error ||
+          "Payment failed.",
+      });
+    } finally {
+      setPaying(false);
     }
   };
 
@@ -588,6 +651,10 @@ function VehicleDetailsModal({
                 >
                   {canStartBooking ? "Book" : unavailableLabel}
                 </button>
+              ) : panelMode === "payment" ? (
+                <button type="button" style={ds.secondaryActionBtn} onClick={() => setPanelMode("book")}>
+                  Back To Booking
+                </button>
               ) : (
                 <button
                   type="button"
@@ -657,7 +724,7 @@ function VehicleDetailsModal({
                   </div>
                 </div>
               </>
-            ) : (
+            ) : panelMode === "book" ? (
               <>
                 {!canStartBooking && (
                   <div style={ds.errorBannerCompact}>
@@ -785,6 +852,132 @@ function VehicleDetailsModal({
                   disabled={!canSaveBooking || saving}
                 >
                   {saving ? "Saving..." : "Save"}
+                </button>
+              </>
+            ) : (
+              <>
+                {saveMessage.text && (
+                  <div
+                    style={
+                      saveMessage.type === "success"
+                        ? ds.successBannerCompact
+                        : ds.errorBannerCompact
+                    }
+                  >
+                    {saveMessage.text}
+                  </div>
+                )}
+
+                <div style={ds.pricePanel}>
+                  <div style={ds.paymentHeader}>
+                    <CreditCard size={20} />
+                    <div>
+                      <div style={{ color: "#fff", fontWeight: 800 }}>Payment Details</div>
+                      <div style={{ color: "#94a3b8", fontSize: "13px", marginTop: "4px" }}>
+                        {createdBooking?.vehicleName || name}
+                      </div>
+                    </div>
+                  </div>
+                  <PriceLine label="Booking total" value={formatCurrencyAmount(createdBooking?.totalPrice || finalAmount, currencySettings)} />
+                  <PriceLine label="Payment method" value={paymentForm.method === "CASH" ? "Cash" : "Card"} />
+                </div>
+
+                <div style={ds.methodToggle}>
+                  <button
+                    type="button"
+                    style={{ ...ds.methodBtn, ...(paymentForm.method === "CARD" ? ds.methodBtnActive : {}) }}
+                    onClick={() => updatePaymentField("method", "CARD")}
+                  >
+                    Card
+                  </button>
+                  <button
+                    type="button"
+                    style={{ ...ds.methodBtn, ...(paymentForm.method === "CASH" ? ds.methodBtnActive : {}) }}
+                    onClick={() => updatePaymentField("method", "CASH")}
+                  >
+                    Cash
+                  </button>
+                </div>
+
+                {paymentForm.method === "CARD" ? (
+                  <>
+                    <label style={ds.fieldGroup}>
+                      <span style={ds.fieldLabel}>Cardholder Name</span>
+                      <input
+                        value={paymentForm.cardholderName}
+                        onChange={(e) => updatePaymentField("cardholderName", e.target.value)}
+                        style={ds.input}
+                      />
+                    </label>
+
+                    <label style={ds.fieldGroup}>
+                      <span style={ds.fieldLabel}>Card Number</span>
+                      <input
+                        inputMode="numeric"
+                        placeholder="4242 4242 4242 4242"
+                        value={paymentForm.cardNumber}
+                        onChange={(e) => updatePaymentField("cardNumber", formatCardNumber(e.target.value))}
+                        style={ds.input}
+                      />
+                    </label>
+
+                    <div style={ds.bookingGrid}>
+                      <label style={ds.fieldGroup}>
+                        <span style={ds.fieldLabel}>Expiry Month</span>
+                        <input
+                          inputMode="numeric"
+                          maxLength={2}
+                          placeholder="12"
+                          value={paymentForm.expiryMonth}
+                          onChange={(e) => updatePaymentField("expiryMonth", onlyDigits(e.target.value).slice(0, 2))}
+                          style={ds.input}
+                        />
+                      </label>
+
+                      <label style={ds.fieldGroup}>
+                        <span style={ds.fieldLabel}>Expiry Year</span>
+                        <input
+                          inputMode="numeric"
+                          maxLength={4}
+                          placeholder="2028"
+                          value={paymentForm.expiryYear}
+                          onChange={(e) => updatePaymentField("expiryYear", onlyDigits(e.target.value).slice(0, 4))}
+                          style={ds.input}
+                        />
+                      </label>
+
+                      <label style={ds.fieldGroup}>
+                        <span style={ds.fieldLabel}>CVV</span>
+                        <input
+                          inputMode="numeric"
+                          maxLength={4}
+                          value={paymentForm.cvv}
+                          onChange={(e) => updatePaymentField("cvv", onlyDigits(e.target.value).slice(0, 4))}
+                          style={ds.input}
+                        />
+                      </label>
+                    </div>
+
+                    <span style={ds.helperText}>
+                      Card details are used only to demonstrate payment validation and are not stored.
+                    </span>
+                  </>
+                ) : (
+                  <div style={ds.infoBannerCompact}>
+                    Cash payment will keep the booking pending until admin confirmation.
+                  </div>
+                )}
+
+                <button
+                  type="button"
+                  style={{
+                    ...ds.primaryActionBtn,
+                    ...(canPay && !paying ? {} : ds.disabledActionBtn),
+                  }}
+                  onClick={handlePay}
+                  disabled={!canPay || paying}
+                >
+                  {paying ? "Processing..." : paymentForm.method === "CASH" ? "Choose Cash Payment" : "Pay"}
                 </button>
               </>
             )}
@@ -980,11 +1173,19 @@ function calculateRentalDays(startDate, endDate) {
   const msPerDay = 1000 * 60 * 60 * 24;
   const diff = Math.round((end - start) / msPerDay);
   if (isNaN(diff) || diff < 0) return 0;
-  return Math.max(diff, 1);
+  return Math.max(diff + 1, 1);
 }
 
 function formatPrice(value) {
   return Number(value || 0).toFixed(2);
+}
+
+function onlyDigits(value) {
+  return (value || "").replace(/\D/g, "");
+}
+
+function formatCardNumber(value) {
+  return onlyDigits(value).slice(0, 19).replace(/(.{4})/g, "$1 ").trim();
 }
 
 function getTodayDateString() {
@@ -1446,6 +1647,32 @@ const ds = {
     padding: "16px",
     display: "grid",
     gap: "12px",
+  },
+  paymentHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "10px",
+    paddingBottom: "12px",
+    borderBottom: "1px solid #334155",
+  },
+  methodToggle: {
+    display: "grid",
+    gridTemplateColumns: "repeat(2, 1fr)",
+    gap: "10px",
+  },
+  methodBtn: {
+    border: "1px solid #334155",
+    background: "#111827",
+    color: "#94a3b8",
+    borderRadius: "12px",
+    padding: "12px 14px",
+    cursor: "pointer",
+    fontWeight: 800,
+  },
+  methodBtnActive: {
+    border: "1px solid rgba(96,165,250,0.55)",
+    background: "rgba(37,99,235,0.22)",
+    color: "#fff",
   },
   priceLine: {
     display: "flex",

@@ -3,12 +3,19 @@ import {
   Calendar as CalendarIcon,
   CheckCircle2,
   AlertCircle,
+  ChevronDown,
   ChevronRight,
+  CreditCard,
   MapPin,
   Receipt,
+<<<<<<< Updated upstream
   Search,
+=======
+  X,
+>>>>>>> Stashed changes
 } from "lucide-react";
-import { getMyBookings } from "../../api/bookingApi";
+import { cancelMyBooking, getMyBookings } from "../../api/bookingApi";
+import { payForBooking } from "../../api/paymentApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount } from "../../utils/currency";
@@ -22,7 +29,12 @@ export default function TenantBookingPage() {
   const isCompact = useIsCompactLayout(900);
   const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [paying, setPaying] = useState(false);
+  const [expandedId, setExpandedId] = useState(null);
+  const [paymentBooking, setPaymentBooking] = useState(null);
+  const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+<<<<<<< Updated upstream
   const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
@@ -50,9 +62,118 @@ export default function TenantBookingPage() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [searchTerm]);
+=======
+  const [paymentForm, setPaymentForm] = useState({
+    method: "CARD",
+    cardholderName: "",
+    cardNumber: "",
+    expiryMonth: "",
+    expiryYear: "",
+    cvv: "",
+  });
+
+  const loadBookings = async () => {
+    try {
+      setLoading(true);
+      const response = await getMyBookings();
+      setBookings(Array.isArray(response.data) ? response.data : []);
+      setError("");
+    } catch (err) {
+      console.error("Failed to load bookings", err);
+      setError(
+        err?.response?.data?.message ||
+        err?.response?.data?.error ||
+        "Failed to load your bookings."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadBookings();
+  }, []);
+>>>>>>> Stashed changes
 
   const activeBooking = bookings[0] || null;
   const bookingHistory = bookings.slice(0, 10);
+  const canPay =
+    paymentBooking &&
+    (paymentForm.method === "CASH" ||
+      (paymentForm.cardholderName.trim() &&
+        paymentForm.cardNumber.replace(/\D/g, "").length >= 12 &&
+        paymentForm.expiryMonth.trim() &&
+        paymentForm.expiryYear.trim() &&
+        paymentForm.cvv.replace(/\D/g, "").length >= 3));
+
+  const openPayment = (booking) => {
+    setPaymentBooking(booking);
+    setMessage("");
+    setError("");
+    setPaymentForm({
+      method: "CARD",
+      cardholderName: "",
+      cardNumber: "",
+      expiryMonth: "",
+      expiryYear: "",
+      cvv: "",
+    });
+  };
+
+  const closePayment = () => {
+    if (paying) return;
+    setPaymentBooking(null);
+  };
+
+  const updatePaymentField = (field, value) => {
+    setPaymentForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handlePay = async () => {
+    if (!canPay || paying) return;
+
+    try {
+      setPaying(true);
+      setError("");
+      setMessage("");
+      const response = await payForBooking({
+        bookingId: paymentBooking.id,
+        method: paymentForm.method,
+        currency: tenantSettings?.currency || "EUR",
+        cardholderName: paymentForm.cardholderName.trim(),
+        cardNumber: paymentForm.cardNumber,
+        expiryMonth: paymentForm.expiryMonth,
+        expiryYear: paymentForm.expiryYear,
+        cvv: paymentForm.cvv,
+      });
+      setMessage(
+        paymentForm.method === "CASH"
+          ? "Cash payment selected. Booking is pending until admin confirmation."
+          : `Payment completed. Invoice ${response.data?.invoiceNumber || ""} will be sent by email.`
+      );
+      setPaymentBooking(null);
+      await loadBookings();
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.response?.data?.error || "Payment failed.");
+    } finally {
+      setPaying(false);
+    }
+  };
+
+  const handleCancelBooking = async (booking) => {
+    if (!booking || !window.confirm("Cancel this pending booking?")) return;
+
+    try {
+      setError("");
+      setMessage("");
+      await cancelMyBooking(booking.id);
+      setMessage("Booking cancelled.");
+      setExpandedId(null);
+      await loadBookings();
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.response?.data?.error || "Failed to cancel booking.");
+    }
+  };
 
   return (
     <div>
@@ -88,6 +209,7 @@ export default function TenantBookingPage() {
         </header>
 
         {error ? <div style={s.errorBanner}>{error}</div> : null}
+        {message ? <div style={s.successBanner}>{message}</div> : null}
 
         <section style={{ ...s.activeBookingCard, ...(isCompact ? s.activeBookingCardCompact : {}) }}>
           <div style={s.activeBadge}>Latest Booking</div>
@@ -130,6 +252,14 @@ export default function TenantBookingPage() {
                     label="Special request"
                     value={activeBooking.specialRequest || "None"}
                   />
+                  <MetaCard
+                    label="Payment"
+                    value={formatPaymentStatus(activeBooking)}
+                  />
+                  <MetaCard
+                    label="Balance due"
+                    value={formatCurrencyAmount(activeBooking.outstandingAmount, tenantSettings)}
+                  />
                 </div>
               </div>
               <img
@@ -163,23 +293,51 @@ export default function TenantBookingPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {bookingHistory.map((booking) => (
-                    <BookingRow
-                      key={booking.id}
-                      car={booking.vehicleName || "Booked Vehicle"}
-                      dateRange={formatDateRange(booking.startDate, booking.endDate)}
-                      location={booking.locationName || "-"}
-                      price={formatCurrencyAmount(booking.totalPrice, tenantSettings)}
-                      status={booking.status}
-                      img={resolveMediaUrl(booking.vehicleImageUrl) || fallbackImage}
-                    />
-                  ))}
+                  {bookingHistory.map((booking) => {
+                    const expanded = expandedId === booking.id;
+                    return (
+                      <React.Fragment key={booking.id}>
+                        <BookingRow
+                          booking={booking}
+                          car={booking.vehicleName || "Booked Vehicle"}
+                          dateRange={formatDateRange(booking.startDate, booking.endDate)}
+                          location={booking.locationName || "-"}
+                          price={formatCurrencyAmount(booking.totalPrice, tenantSettings)}
+                          status={booking.status}
+                          img={resolveMediaUrl(booking.vehicleImageUrl) || fallbackImage}
+                          expanded={expanded}
+                          onToggle={() => setExpandedId(expanded ? null : booking.id)}
+                        />
+                        {expanded ? (
+                          <BookingDetailsRow
+                            booking={booking}
+                            tenantSettings={tenantSettings}
+                            onPay={() => openPayment(booking)}
+                            onCancel={() => handleCancelBooking(booking)}
+                          />
+                        ) : null}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             )}
           </div>
         </section>
       </main>
+
+      {paymentBooking ? (
+        <PaymentModal
+          booking={paymentBooking}
+          form={paymentForm}
+          paying={paying}
+          canPay={canPay}
+          tenantSettings={tenantSettings}
+          onChange={updatePaymentField}
+          onPay={handlePay}
+          onClose={closePayment}
+        />
+      ) : null}
     </div>
   );
 }
@@ -191,7 +349,7 @@ const MetaCard = ({ label, value }) => (
   </div>
 );
 
-const BookingRow = ({ car, dateRange, location, price, status, img }) => (
+const BookingRow = ({ car, dateRange, location, price, status, img, expanded, onToggle }) => (
   <tr style={s.tr}>
     <td style={s.td}>
       <div style={{ display: "flex", alignItems: "center", gap: 15 }}>
@@ -214,9 +372,140 @@ const BookingRow = ({ car, dateRange, location, price, status, img }) => (
       <span style={getStatusBadgeStyle(status)}>{formatStatus(status)}</span>
     </td>
     <td style={s.td}>
-      <ChevronRight size={18} color="#64748b" />
+      <button type="button" style={s.iconBtn} onClick={onToggle} aria-label="Toggle booking details">
+        {expanded ? <ChevronDown size={18} /> : <ChevronRight size={18} />}
+      </button>
     </td>
   </tr>
+);
+
+const BookingDetailsRow = ({ booking, tenantSettings, onPay, onCancel }) => (
+  <tr style={s.expandedTr}>
+    <td style={s.expandedTd} colSpan={6}>
+      <div style={s.expandedPanel}>
+        <div style={s.detailGrid}>
+          <MetaCard label="Base price" value={formatCurrencyAmount(booking.basePrice, tenantSettings)} />
+          <MetaCard label="Add-ons" value={formatCurrencyAmount(booking.addonPrice, tenantSettings)} />
+          <MetaCard label="Total" value={formatCurrencyAmount(booking.totalPrice, tenantSettings)} />
+          <MetaCard label="Paid" value={formatCurrencyAmount(booking.paidAmount, tenantSettings)} />
+          <MetaCard label="Balance due" value={formatCurrencyAmount(booking.outstandingAmount, tenantSettings)} />
+          <MetaCard label="Included" value={(booking.addonNames || []).join(", ") || "None"} />
+          <MetaCard label="Special request" value={booking.specialRequest || "None"} />
+          <MetaCard label="Payment" value={formatPaymentStatus(booking)} />
+        </div>
+        <div style={s.expandedActions}>
+          {canPayBooking(booking) ? (
+            <>
+              {booking.status === "PENDING" ? (
+                <button type="button" style={s.cancelBtn} onClick={onCancel}>
+                  Cancel
+                </button>
+              ) : null}
+              <button type="button" style={s.payBtn} onClick={onPay}>
+                <CreditCard size={16} />
+                Pay balance
+              </button>
+            </>
+          ) : booking.paymentStatus === "PAID" ? (
+            <span style={s.paidText}>Payment confirmed</span>
+          ) : booking.paymentStatus === "PENDING" ? (
+            <span style={s.pendingPaymentText}>Awaiting cash confirmation</span>
+          ) : booking.status === "PENDING" ? (
+            <>
+              <button type="button" style={s.cancelBtn} onClick={onCancel}>
+                Cancel
+              </button>
+              <button type="button" style={s.payBtn} onClick={onPay}>
+                <CreditCard size={16} />
+                Pay
+              </button>
+            </>
+          ) : (
+            <span style={s.paidText}>{formatStatus(booking.status)}</span>
+          )}
+        </div>
+      </div>
+    </td>
+  </tr>
+);
+
+const PaymentModal = ({ booking, form, paying, canPay, tenantSettings, onChange, onPay, onClose }) => (
+  <div style={s.modalOverlay} onClick={onClose}>
+    <div style={s.modalCard} onClick={(event) => event.stopPropagation()}>
+      <div style={s.modalHeader}>
+        <div>
+          <h2 style={s.modalTitle}>Pay Booking</h2>
+          <p style={s.modalSubtitle}>{booking.vehicleName || "Booked Vehicle"} - {formatCurrencyAmount(paymentDueAmount(booking), tenantSettings)}</p>
+        </div>
+        <button type="button" style={s.closeBtn} onClick={onClose} aria-label="Close payment">
+          <X size={18} />
+        </button>
+      </div>
+
+      <div style={s.paymentSummary}>
+        <PriceLine label="Dates" value={formatDateRange(booking.startDate, booking.endDate)} />
+        <PriceLine label="Method" value={form.method === "CASH" ? "Cash" : "Card"} />
+        <PriceLine label="Balance due" value={formatCurrencyAmount(paymentDueAmount(booking), tenantSettings)} />
+      </div>
+
+      <div style={s.methodToggle}>
+        <button type="button" style={{ ...s.methodBtn, ...(form.method === "CARD" ? s.methodBtnActive : {}) }} onClick={() => onChange("method", "CARD")}>
+          Card
+        </button>
+        <button type="button" style={{ ...s.methodBtn, ...(form.method === "CASH" ? s.methodBtnActive : {}) }} onClick={() => onChange("method", "CASH")}>
+          Cash
+        </button>
+      </div>
+
+      {form.method === "CARD" ? (
+        <>
+          <label style={s.fieldGroup}>
+            <span style={s.fieldLabel}>Cardholder Name</span>
+            <input style={s.input} value={form.cardholderName} onChange={(e) => onChange("cardholderName", e.target.value)} />
+          </label>
+
+          <label style={s.fieldGroup}>
+            <span style={s.fieldLabel}>Card Number</span>
+            <input
+              style={s.input}
+              inputMode="numeric"
+              placeholder="4242 4242 4242 4242"
+              value={form.cardNumber}
+              onChange={(e) => onChange("cardNumber", formatCardNumber(e.target.value))}
+            />
+          </label>
+
+          <div style={s.paymentGrid}>
+            <label style={s.fieldGroup}>
+              <span style={s.fieldLabel}>Month</span>
+              <input style={s.input} inputMode="numeric" maxLength={2} placeholder="12" value={form.expiryMonth} onChange={(e) => onChange("expiryMonth", onlyDigits(e.target.value).slice(0, 2))} />
+            </label>
+            <label style={s.fieldGroup}>
+              <span style={s.fieldLabel}>Year</span>
+              <input style={s.input} inputMode="numeric" maxLength={4} placeholder="2028" value={form.expiryYear} onChange={(e) => onChange("expiryYear", onlyDigits(e.target.value).slice(0, 4))} />
+            </label>
+            <label style={s.fieldGroup}>
+              <span style={s.fieldLabel}>CVV</span>
+              <input style={s.input} inputMode="numeric" maxLength={4} value={form.cvv} onChange={(e) => onChange("cvv", onlyDigits(e.target.value).slice(0, 4))} />
+            </label>
+          </div>
+        </>
+      ) : (
+        <div style={s.cashNotice}>Cash payment will keep the booking pending until admin confirmation.</div>
+      )}
+
+      <button type="button" style={{ ...s.payBtnWide, ...(!canPay || paying ? s.disabledBtn : {}) }} disabled={!canPay || paying} onClick={onPay}>
+        {paying ? "Processing..." : form.method === "CASH" ? "Choose Cash Payment" : "Pay"}
+      </button>
+    </div>
+  </div>
+);
+
+const PriceLine = ({ label, value }) => (
+  <div style={s.priceLine}>
+    <span>{label}</span>
+    <strong>{value}</strong>
+  </div>
 );
 
 function formatDateRange(startDate, endDate) {
@@ -225,11 +514,24 @@ function formatDateRange(startDate, endDate) {
 }
 
 function formatDate(value) {
-  return new Date(value).toLocaleDateString("en-GB", {
+  const datePart = extractDatePart(value);
+  if (!datePart) return "-";
+  return new Date(`${datePart}T00:00:00`).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
   });
+}
+
+function extractDatePart(value) {
+  if (!value) return "";
+  if (typeof value === "string") return value.slice(0, 10);
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
 }
 
 function formatStatus(value) {
@@ -240,8 +542,46 @@ function formatStatus(value) {
     .join(" ");
 }
 
-function formatPrice(value) {
-  return Number(value || 0).toFixed(2);
+function formatPaymentStatus(booking) {
+  if (booking?.paymentStatus === "REFUNDED") {
+    return "Payment refunded";
+  }
+  if (booking?.status === "CANCELLED" && booking?.paymentStatus && booking.paymentStatus !== "PAID") {
+    return "Payment cancelled";
+  }
+  if (!booking?.paymentStatus) {
+    return "Not paid";
+  }
+
+  const method = booking.paymentMethod === "CASH" ? "Cash" : "Card";
+  if (booking.paymentStatus === "PAID") {
+    return `${method} confirmed`;
+  }
+  if (booking.paymentStatus === "PENDING") {
+    return `${method} pending`;
+  }
+  return `${method} ${formatStatus(booking.paymentStatus).toLowerCase()}`;
+}
+
+function paymentDueAmount(booking) {
+  return Number(booking?.outstandingAmount || 0) > 0 ? booking.outstandingAmount : booking?.totalPrice;
+}
+
+function canPayBooking(booking) {
+  return (
+    Number(booking?.outstandingAmount || 0) > 0 &&
+    booking?.paymentStatus !== "PENDING" &&
+    booking?.status !== "CANCELLED" &&
+    booking?.status !== "COMPLETED"
+  );
+}
+
+function onlyDigits(value) {
+  return (value || "").replace(/\D/g, "");
+}
+
+function formatCardNumber(value) {
+  return onlyDigits(value).slice(0, 19).replace(/(.{4})/g, "$1 ").trim();
 }
 
 function getStatusBadgeStyle(status) {
@@ -268,6 +608,7 @@ const s = {
   infoPill: { display: "flex", alignItems: "center", gap: "8px", background: "#161f2e", padding: "10px 20px", borderRadius: "10px", border: "1px solid #2d3748", color: "#cbd5e1" },
   datePicker: { display: "flex", alignItems: "center", gap: "8px", background: "#3b82f6", padding: "10px 20px", borderRadius: "10px", color: "#fff" },
   errorBanner: { background: "rgba(127, 29, 29, 0.25)", color: "#fecaca", border: "1px solid #7f1d1d", borderRadius: "14px", padding: "12px 14px", marginBottom: "20px" },
+  successBanner: { background: "rgba(20, 83, 45, 0.25)", color: "#bbf7d0", border: "1px solid #14532d", borderRadius: "14px", padding: "12px 14px", marginBottom: "20px" },
   activeBookingCard: { background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: "28px", padding: "40px", border: "1px solid #334155", position: "relative", overflow: "hidden" },
   activeBookingCardCompact: { padding: "22px 18px" },
   activeBadge: { background: "rgba(59, 130, 246, 0.2)", color: "#3b82f6", padding: "6px 15px", borderRadius: "20px", fontSize: 12, fontWeight: "700", width: "fit-content", marginBottom: 20 },
@@ -291,5 +632,32 @@ const s = {
   td: { padding: "20px 15px" },
   tableImgBox: { background: "#161f2e", padding: "5px", borderRadius: "8px" },
   statusBadge: { background: "rgba(16, 185, 129, 0.1)", color: "#10b981", padding: "5px 12px", borderRadius: "8px", fontSize: 13 },
+  iconBtn: { width: "34px", height: "34px", borderRadius: "10px", border: "1px solid #334155", background: "#111827", color: "#94a3b8", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
+  expandedTr: { borderBottom: "1px solid #1e293b" },
+  expandedTd: { padding: "0 15px 20px" },
+  expandedPanel: { background: "#111827", border: "1px solid #1e293b", borderRadius: "16px", padding: "16px", display: "grid", gap: "16px" },
+  detailGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(160px, 1fr))", gap: "12px" },
+  expandedActions: { display: "flex", justifyContent: "flex-end", gap: "12px", flexWrap: "wrap" },
+  payBtn: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "#2563eb", color: "#fff", border: "none", borderRadius: "12px", padding: "11px 16px", cursor: "pointer", fontWeight: 800 },
+  cancelBtn: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(248,113,113,0.32)", borderRadius: "12px", padding: "11px 16px", cursor: "pointer", fontWeight: 800 },
+  paidText: { color: "#94a3b8", fontSize: "14px" },
+  pendingPaymentText: { color: "#fbbf24", fontSize: "14px", fontWeight: 700 },
+  modalOverlay: { position: "fixed", inset: 0, background: "rgba(2, 6, 23, 0.72)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", zIndex: 1000 },
+  modalCard: { width: "min(520px, 100%)", background: "#0f172a", border: "1px solid #1e293b", borderRadius: "22px", padding: "22px", boxShadow: "0 30px 70px rgba(0,0,0,0.45)", display: "grid", gap: "16px" },
+  modalHeader: { display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "16px" },
+  modalTitle: { margin: 0, color: "#fff", fontSize: "24px" },
+  modalSubtitle: { margin: "8px 0 0", color: "#94a3b8" },
+  closeBtn: { border: "none", background: "transparent", color: "#94a3b8", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center" },
+  paymentSummary: { background: "#111827", border: "1px solid #1e293b", borderRadius: "14px", padding: "14px", display: "grid", gap: "10px" },
+  priceLine: { display: "flex", justifyContent: "space-between", gap: "12px", color: "#94a3b8" },
+  methodToggle: { display: "grid", gridTemplateColumns: "repeat(2, 1fr)", gap: "10px" },
+  methodBtn: { border: "1px solid #334155", background: "#111827", color: "#94a3b8", borderRadius: "12px", padding: "12px 14px", cursor: "pointer", fontWeight: 800 },
+  methodBtnActive: { border: "1px solid rgba(96,165,250,0.55)", background: "rgba(37,99,235,0.22)", color: "#fff" },
+  cashNotice: { background: "rgba(30,64,175,0.18)", color: "#bfdbfe", border: "1px solid rgba(96,165,250,0.45)", borderRadius: "14px", padding: "12px 14px" },
+  fieldGroup: { display: "grid", gap: "8px" },
+  fieldLabel: { color: "#94a3b8", fontSize: "13px", fontWeight: 700 },
+  input: { width: "100%", background: "#111827", border: "1px solid #334155", color: "#fff", borderRadius: "12px", padding: "12px 14px", outline: "none" },
+  paymentGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" },
+  payBtnWide: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "#2563eb", color: "#fff", border: "none", borderRadius: "12px", padding: "13px 16px", cursor: "pointer", fontWeight: 800 },
+  disabledBtn: { opacity: 0.55, cursor: "not-allowed" },
 };
-

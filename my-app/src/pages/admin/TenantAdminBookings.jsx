@@ -14,8 +14,6 @@ import { badge, button, card, emptyState, form, layout, palette, table, getReadH
 const BOOKING_STATUSES = ["PENDING", "CONFIRMED", "ACTIVE", "COMPLETED", "CANCELLED"];
 
 const initialDecision = {
-  startDate: "",
-  endDate: "",
   status: "PENDING",
   addonName: "",
   addonCharge: "",
@@ -26,7 +24,7 @@ const formatPrice = (value) => Number(value || 0).toFixed(2);
 
 const formatDate = (value) => {
   if (!value) return "-";
-  return new Date(value).toLocaleDateString("en-GB", {
+  return new Date(`${String(value).slice(0, 10)}T00:00:00`).toLocaleDateString("en-GB", {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -35,8 +33,8 @@ const formatDate = (value) => {
 
 const toDateInputValue = (value) => {
   if (!value) return "";
-  if (typeof value === "string" && value.includes("T")) {
-    return value.split("T")[0];
+  if (typeof value === "string") {
+    return value.slice(0, 10);
   }
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return "";
@@ -71,7 +69,32 @@ export default function TenantAdminBookings() {
     [bookings, selectedId]
   );
 
+<<<<<<< Updated upstream
   const loadBookings = async (keyword = "") => {
+=======
+  const bookingPricePreview = useMemo(() => {
+    if (!selectedBooking) {
+      return null;
+    }
+
+    const addonCharge = decision.addonCharge === "" ? 0 : Number(decision.addonCharge || 0);
+    const addonPrice = Number(selectedBooking.addonPrice || 0) + addonCharge;
+    const discountAmount = Number(selectedBooking.discountAmount || 0);
+    const basePrice = Number(selectedBooking.basePrice || 0);
+    const totalPrice = Math.max(basePrice + addonPrice - discountAmount, 0);
+    const paidAmount = Number(selectedBooking.paidAmount || 0);
+
+    return {
+      basePrice,
+      addonPrice,
+      totalPrice,
+      paidAmount,
+      outstandingAmount: Math.max(totalPrice - paidAmount, 0),
+    };
+  }, [selectedBooking, decision.addonCharge]);
+
+  const loadBookings = async () => {
+>>>>>>> Stashed changes
     try {
       setLoading(true);
       setError("");
@@ -96,8 +119,6 @@ export default function TenantAdminBookings() {
     if (!selectedBooking) return;
     setSelectedId(selectedBooking.id);
     setDecision({
-      startDate: toDateInputValue(selectedBooking.startDate),
-      endDate: toDateInputValue(selectedBooking.endDate),
       status: selectedBooking.status || "PENDING",
       addonName: "",
       addonCharge: "",
@@ -120,8 +141,6 @@ export default function TenantAdminBookings() {
       setMessage("");
 
       await updateAdminBooking(selectedBooking.id, {
-        startDate: decision.startDate || null,
-        endDate: decision.endDate || null,
         status: decision.status,
         addonName: decision.addonName.trim() || null,
         addonCharge: decision.addonCharge === "" ? null : Number(decision.addonCharge),
@@ -271,36 +290,16 @@ export default function TenantAdminBookings() {
             <div style={{ ...form.stack, marginTop: "18px" }}>
               <div style={{ ...card.panel, boxShadow: "none", borderRadius: "14px", padding: "16px" }}>
                 <div style={{ display: "grid", gap: "10px", color: palette.muted, fontSize: "0.92rem" }}>
-                  <span>Base: {formatCurrencyAmount(selectedBooking.basePrice, tenantSettings)}</span>
-                  <span>Add-ons: {formatCurrencyAmount(selectedBooking.addonPrice, tenantSettings)}</span>
-                  <span>Total: {formatCurrencyAmount(selectedBooking.totalPrice, tenantSettings)}</span>
+                  <span>Base: {formatCurrencyAmount(bookingPricePreview?.basePrice ?? selectedBooking.basePrice, tenantSettings)}</span>
+                  <span>Add-ons: {formatCurrencyAmount(bookingPricePreview?.addonPrice ?? selectedBooking.addonPrice, tenantSettings)}</span>
+                  <span>Total: {formatCurrencyAmount(bookingPricePreview?.totalPrice ?? selectedBooking.totalPrice, tenantSettings)}</span>
+                  <span>Paid: {formatCurrencyAmount(bookingPricePreview?.paidAmount ?? selectedBooking.paidAmount, tenantSettings)}</span>
+                  <span>Balance due: {formatCurrencyAmount(bookingPricePreview?.outstandingAmount ?? selectedBooking.outstandingAmount, tenantSettings)}</span>
                   <span>Included: {(selectedBooking.addonNames || []).join(", ") || "None"}</span>
                 </div>
                 {selectedBooking.specialRequest && (
                   <p style={{ margin: "14px 0 0", color: palette.text, lineHeight: 1.6 }}>{selectedBooking.specialRequest}</p>
                 )}
-              </div>
-
-              <div style={form.row}>
-                <div style={form.field}>
-                  <label style={form.label}>Start date</label>
-                  <input
-                    style={form.input}
-                    type="date"
-                    value={decision.startDate}
-                    onChange={(event) => setDecision({ ...decision, startDate: event.target.value })}
-                  />
-                </div>
-                <div style={form.field}>
-                  <label style={form.label}>End date</label>
-                  <input
-                    style={form.input}
-                    type="date"
-                    min={decision.startDate || undefined}
-                    value={decision.endDate}
-                    onChange={(event) => setDecision({ ...decision, endDate: event.target.value })}
-                  />
-                </div>
               </div>
 
               <div style={form.field}>
@@ -359,8 +358,6 @@ export default function TenantAdminBookings() {
                   type="button"
                   style={button.secondary}
                   onClick={() => setDecision({
-                    startDate: toDateInputValue(selectedBooking.startDate),
-                    endDate: toDateInputValue(selectedBooking.endDate),
                     status: selectedBooking.status || "PENDING",
                     addonName: "",
                     addonCharge: "",
