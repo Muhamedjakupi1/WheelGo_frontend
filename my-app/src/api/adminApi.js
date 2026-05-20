@@ -51,7 +51,8 @@ export const deleteAdminAddon = (id) => http.delete(`/api/v1/admin/addons/${id}`
 export const getAdminVehicles = (keyword = "") =>
   http.get("/api/v1/admin/vehicles", { params: keyword ? { keyword } : {} });
 
-export const getAdminMaintenances = () => http.get("/api/v1/admin/maintenances");
+export const getAdminMaintenances = (keyword = "") =>
+  http.get("/api/v1/admin/maintenances", { params: keyword ? { keyword } : {} });
 export const getAdminMaintenanceTypes = () => http.get("/api/v1/admin/maintenances/types");
 export const createAdminMaintenance = (data) => http.post("/api/v1/admin/maintenances", data);
 export const updateAdminMaintenance = (id, data) => http.patch(`/api/v1/admin/maintenances/${id}`, data);

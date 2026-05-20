@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { CreditCard, RefreshCw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { CreditCard, RefreshCw, Search } from "lucide-react";
 import { getMyBookings } from "../../api/bookingApi";
 import { getMyPayments } from "../../api/paymentApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
@@ -11,12 +11,14 @@ export default function UserPayments() {
   const [bookingsById, setBookingsById] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const loadPayments = async () => {
+  const loadPayments = useCallback(async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
-      const [paymentResponse, bookingResponse] = await Promise.all([getMyPayments(), getMyBookings()]);
+      const normalizedKeyword = keyword.trim();
+      const [paymentResponse, bookingResponse] = await Promise.all([getMyPayments(normalizedKeyword), getMyBookings()]);
       setPayments(Array.isArray(paymentResponse.data) ? paymentResponse.data : []);
       setBookingsById(
         Object.fromEntries((Array.isArray(bookingResponse.data) ? bookingResponse.data : []).map((booking) => [booking.id, booking]))
@@ -26,11 +28,15 @@ export default function UserPayments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadPayments();
-  }, []);
+    const timeout = window.setTimeout(() => {
+      loadPayments(searchTerm);
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [loadPayments, searchTerm]);
 
   return (
     <main style={s.page}>
@@ -39,13 +45,26 @@ export default function UserPayments() {
           <h1 style={s.title}>Payments</h1>
           <p style={s.subtitle}>Track your paid bookings and invoice numbers.</p>
         </div>
-        <button type="button" onClick={loadPayments} style={s.refreshBtn}>
+        <button type="button" onClick={() => loadPayments(searchTerm)} style={s.refreshBtn}>
           <RefreshCw size={16} />
           Refresh
         </button>
       </header>
 
       {error ? <div style={s.error}>{error}</div> : null}
+
+      <section style={s.toolbar}>
+        <div style={s.searchWrap}>
+          <Search size={17} color="#94a3b8" />
+          <input
+            type="search"
+            value={searchTerm}
+            onChange={(event) => setSearchTerm(event.target.value)}
+            placeholder="Search payments..."
+            style={s.searchInput}
+          />
+        </div>
+      </section>
 
       <section style={s.panel}>
         {loading ? (
@@ -131,6 +150,9 @@ const s = {
   title: { margin: 0, fontSize: "32px" },
   subtitle: { margin: "8px 0 0", color: "#94a3b8" },
   refreshBtn: { display: "inline-flex", alignItems: "center", gap: "8px", background: "transparent", color: "#fff", border: "1px solid #334155", borderRadius: "12px", padding: "11px 14px", cursor: "pointer", fontWeight: 700 },
+  toolbar: { display: "flex", justifyContent: "flex-end" },
+  searchWrap: { width: "min(100%, 420px)", display: "flex", alignItems: "center", gap: "10px", background: "#0f172a", border: "1px solid #334155", borderRadius: "12px", padding: "0 12px" },
+  searchInput: { width: "100%", minHeight: "42px", background: "transparent", border: 0, outline: "none", color: "#fff", fontSize: "14px" },
   panel: { background: "#0f172a", border: "1px solid #1e293b", borderRadius: "18px", padding: "20px" },
   tableWrap: { overflowX: "auto" },
   table: { width: "100%", borderCollapse: "collapse" },
