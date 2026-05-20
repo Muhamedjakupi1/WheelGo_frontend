@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { Banknote, CheckCircle2, CreditCard, RefreshCw, RotateCcw } from "lucide-react";
+import { useCallback, useEffect, useState } from "react";
+import { Banknote, CheckCircle2, CreditCard, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { getAdminBookings } from "../../api/adminApi";
 import { confirmCashPayment, getAdminPayments, refundPayment } from "../../api/paymentApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
@@ -14,12 +14,14 @@ export default function TenantAdminPayments() {
   const [confirmingId, setConfirmingId] = useState(null);
   const [refundingId, setRefundingId] = useState(null);
   const [error, setError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
-  const loadPayments = async () => {
+  const loadPayments = useCallback(async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
-      const [paymentResponse, bookingResponse] = await Promise.all([getAdminPayments(), getAdminBookings()]);
+      const normalizedKeyword = keyword.trim();
+      const [paymentResponse, bookingResponse] = await Promise.all([getAdminPayments(normalizedKeyword), getAdminBookings()]);
       setPayments(Array.isArray(paymentResponse.data) ? paymentResponse.data : []);
       setBookingsById(
         Object.fromEntries((Array.isArray(bookingResponse.data) ? bookingResponse.data : []).map((booking) => [booking.id, booking]))
@@ -29,11 +31,15 @@ export default function TenantAdminPayments() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadPayments();
-  }, []);
+    const timeout = window.setTimeout(() => {
+      loadPayments(searchTerm);
+    }, 300);
+
+    return () => window.clearTimeout(timeout);
+  }, [loadPayments, searchTerm]);
 
   const handleConfirmCashPayment = async (paymentId) => {
     if (!paymentId || confirmingId) return;
@@ -45,7 +51,7 @@ export default function TenantAdminPayments() {
       setPayments((current) =>
         current.map((payment) => (payment.id === paymentId ? { ...payment, ...response.data } : payment))
       );
-      await loadPayments();
+      await loadPayments(searchTerm);
     } catch (err) {
       setError(err?.response?.data?.message || err?.response?.data?.error || "Failed to confirm cash payment.");
     } finally {
@@ -63,7 +69,7 @@ export default function TenantAdminPayments() {
       setPayments((current) =>
         current.map((payment) => (payment.id === paymentId ? { ...payment, ...response.data } : payment))
       );
-      await loadPayments();
+      await loadPayments(searchTerm);
     } catch (err) {
       setError(err?.response?.data?.message || err?.response?.data?.error || "Failed to refund payment.");
     } finally {
@@ -85,7 +91,7 @@ export default function TenantAdminPayments() {
             <h1 style={{ margin: 0, fontSize: "1.9rem", color: palette.text }}>Payments</h1>
             <p style={card.subtitle}>Review customer payments, booking links, and generated invoices.</p>
           </div>
-          <button type="button" onClick={loadPayments} style={{ ...button.secondary, display: "inline-flex", alignItems: "center", gap: "10px" }}>
+          <button type="button" onClick={() => loadPayments(searchTerm)} style={{ ...button.secondary, display: "inline-flex", alignItems: "center", gap: "10px" }}>
             <RefreshCw size={16} />
             Refresh
           </button>
@@ -102,6 +108,19 @@ export default function TenantAdminPayments() {
       {error ? <div style={{ ...badge("danger"), justifyContent: "center" }}>{error}</div> : null}
 
       <section style={card.panel}>
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "16px" }}>
+          <div style={searchBox}>
+            <Search size={17} color={palette.muted} />
+            <input
+              type="search"
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Search payments..."
+              style={searchInput}
+            />
+          </div>
+        </div>
+
         {loading ? (
           <div style={emptyState}>Loading payments...</div>
         ) : payments.length === 0 ? (
@@ -203,6 +222,27 @@ export default function TenantAdminPayments() {
     </div>
   );
 }
+
+const searchBox = {
+  width: "min(100%, 420px)",
+  display: "flex",
+  alignItems: "center",
+  gap: "10px",
+  background: "rgba(15, 23, 42, 0.72)",
+  border: `1px solid ${palette.border}`,
+  borderRadius: "12px",
+  padding: "0 12px",
+};
+
+const searchInput = {
+  width: "100%",
+  minHeight: "42px",
+  background: "transparent",
+  border: 0,
+  outline: "none",
+  color: palette.text,
+  fontSize: "0.94rem",
+};
 
 const Metric = ({ label, value }) => (
   <article style={{ ...card.panel, boxShadow: "none", borderRadius: "16px" }}>

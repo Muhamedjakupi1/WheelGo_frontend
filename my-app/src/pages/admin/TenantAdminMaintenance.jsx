@@ -51,6 +51,7 @@ export default function TenantAdminMaintenance() {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [confirmLoading, setConfirmLoading] = useState(false);
   const [confirmError, setConfirmError] = useState("");
+  const [searchTerm, setSearchTerm] = useState("");
 
   const isEditing = useMemo(() => selectedId !== null, [selectedId]);
 
@@ -59,12 +60,12 @@ export default function TenantAdminMaintenance() {
     [vehicles, formData.vehicleId]
   );
 
-  const loadData = async () => {
+  const loadData = async (keyword = "") => {
     try {
       setLoading(true);
       setError("");
       const [maintenancesRes, typesRes, vehiclesRes] = await Promise.all([
-        getAdminMaintenances(),
+        getAdminMaintenances(keyword),
         getAdminMaintenanceTypes(),
         getAdminVehicles(),
       ]);
@@ -81,8 +82,12 @@ export default function TenantAdminMaintenance() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      loadData(searchTerm.trim());
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [searchTerm]);
 
   const resetForm = () => {
     setSelectedId(null);
@@ -131,7 +136,7 @@ export default function TenantAdminMaintenance() {
         setSuccess("Maintenance record created and vehicle moved to maintenance.");
       }
 
-      await loadData();
+      await loadData(searchTerm.trim());
       resetForm();
     } catch (err) {
       setSuccess("");
@@ -163,7 +168,7 @@ export default function TenantAdminMaintenance() {
       await deleteAdminMaintenance(confirmDelete.id);
       if (selectedId === confirmDelete.id) resetForm();
       setConfirmDelete(null);
-      await loadData();
+      await loadData(searchTerm.trim());
       setSuccess("Maintenance record deleted successfully.");
     } catch (err) {
       setSuccess("");
@@ -190,6 +195,16 @@ export default function TenantAdminMaintenance() {
               <p style={card.subtitle}>{maintenances.length} active records</p>
             </div>
             <div style={badge("default")}>{loading ? "Loading" : "Live list"}</div>
+          </div>
+
+          <div style={{ marginBottom: "18px" }}>
+            <input
+              style={{ ...form.input, width: "100%", maxWidth: "350px" }}
+              type="text"
+              placeholder="Search maintenance..."
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+            />
           </div>
 
           {loading ? (

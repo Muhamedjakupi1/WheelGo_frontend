@@ -128,7 +128,7 @@ export default function TenantAdminBookings() {
         note: decision.note.trim() || null,
       });
 
-      await loadBookings();
+      await loadBookings(searchTerm.trim());
       setDecision((current) => ({
         ...current,
         addonName: "",
@@ -161,7 +161,7 @@ export default function TenantAdminBookings() {
       setError("");
       setMessage("");
       await deleteAdminBooking(deleteState.id);
-      await loadBookings();
+      await loadBookings(searchTerm.trim());
       if (selectedId === deleteState.id) {
         setSelectedId(null);
         setDecision(initialDecision);
