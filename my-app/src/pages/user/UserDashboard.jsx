@@ -20,6 +20,7 @@ import { useAuth } from "../../context/AuthContext";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { createBooking } from "../../api/bookingApi";
 import { getAddons } from "../../api/addonApi";
+import { getMyDriverLicense } from "../../api/driverLicenseApi";
 import { payForBooking } from "../../api/paymentApi";
 import { getVehicles } from "../../api/vehicleApi";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
@@ -284,6 +285,10 @@ export default function TenantUserDashboard() {
             setDetailsVehicle(null);
             navigate(`/t/${tenantSlug}/payments`);
           }}
+          onProfileRequired={() => {
+            setDetailsVehicle(null);
+            navigate(`/t/${tenantSlug}/profile`);
+          }}
           onClose={() => setDetailsVehicle(null)}
         />
       ) : null}
@@ -351,6 +356,7 @@ function VehicleDetailsModal({
   vehicle,
   currencySettings,
   onBookingSaved,
+  onProfileRequired,
   onClose,
 }) {
   const isCompactBooking = useIsCompactLayout(1100);
@@ -397,6 +403,8 @@ function VehicleDetailsModal({
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
   const [paying, setPaying] = useState(false);
+  const [checkingLicense, setCheckingLicense] = useState(false);
+  const [showLicensePrompt, setShowLicensePrompt] = useState(false);
 
   // Fetch addons nga API
   useEffect(() => {
@@ -458,7 +466,36 @@ function VehicleDetailsModal({
         paymentForm.expiryYear.trim() &&
         paymentForm.cvv.replace(/\D/g, "").length >= 3));
 
+  const ensureDriverLicenseVerified = async () => {
+    try {
+      setCheckingLicense(true);
+      const response = await getMyDriverLicense();
+      if (isDriverLicenseVerified(response.data)) {
+        return true;
+      }
+      setShowLicensePrompt(true);
+      return false;
+    } catch (error) {
+      setShowLicensePrompt(true);
+      return false;
+    } finally {
+      setCheckingLicense(false);
+    }
+  };
+
+  const handleOpenBookingPanel = async () => {
+    if (!canStartBooking || checkingLicense) return;
+    const verified = await ensureDriverLicenseVerified();
+    if (verified) {
+      setPanelMode("book");
+    }
+  };
+
   const handleSaveDraft = async () => {
+    if (!(await ensureDriverLicenseVerified())) {
+      return;
+    }
+
     if (!canSaveBooking) {
       setSaveMessage({
         type: "error",
@@ -640,12 +677,12 @@ function VehicleDetailsModal({
                   type="button"
                   style={{
                     ...ds.primaryActionBtn,
-                    ...(canStartBooking ? {} : ds.disabledActionBtn),
+                    ...(canStartBooking && !checkingLicense ? {} : ds.disabledActionBtn),
                   }}
-                  onClick={() => canStartBooking && setPanelMode("book")}
-                  disabled={!canStartBooking}
+                  onClick={handleOpenBookingPanel}
+                  disabled={!canStartBooking || checkingLicense}
                 >
-                  {canStartBooking ? "Book" : unavailableLabel}
+                  {checkingLicense ? "Checking..." : canStartBooking ? "Book" : unavailableLabel}
                 </button>
               ) : panelMode === "payment" ? (
                 <button type="button" style={ds.secondaryActionBtn} onClick={() => setPanelMode("book")}>
@@ -980,6 +1017,25 @@ function VehicleDetailsModal({
           </div>
         </div>
       </div>
+
+      {showLicensePrompt ? (
+        <div style={ds.licensePromptOverlay} onClick={() => setShowLicensePrompt(false)}>
+          <div style={ds.licensePromptCard} onClick={(event) => event.stopPropagation()}>
+            <h3 style={ds.licensePromptTitle}>Driver license required</h3>
+            <p style={ds.licensePromptText}>
+              You cannot book a vehicle until your driver license is verified. Go to Profile and upload your driver license first.
+            </p>
+            <div style={ds.licensePromptActions}>
+              <button type="button" style={ds.secondaryActionBtn} onClick={() => setShowLicensePrompt(false)}>
+                Close
+              </button>
+              <button type="button" style={ds.primaryActionBtn} onClick={onProfileRequired}>
+                Go to Profile
+              </button>
+            </div>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -1182,6 +1238,10 @@ function formatCardNumber(value) {
 
 function getTodayDateString() {
   return new Date().toISOString().split("T")[0];
+}
+
+function isDriverLicenseVerified(license) {
+  return Boolean(license?.isVerified ?? license?.verified ?? license?.verifiedAt);
 }
 
 // --------------------------------------------------------------
@@ -1745,6 +1805,27 @@ const ds = {
     borderRadius: "14px",
     padding: "12px 14px",
   },
+  licensePromptOverlay: {
+    position: "fixed",
+    inset: 0,
+    background: "rgba(2, 6, 23, 0.78)",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    padding: "24px",
+    zIndex: 1100,
+  },
+  licensePromptCard: {
+    width: "min(440px, 100%)",
+    background: "#0f172a",
+    border: "1px solid #334155",
+    borderRadius: "20px",
+    padding: "22px",
+    boxShadow: "0 25px 70px rgba(0,0,0,0.45)",
+  },
+  licensePromptTitle: { margin: 0, color: "#fff", fontSize: "22px" },
+  licensePromptText: { color: "#cbd5e1", lineHeight: 1.55, margin: "12px 0 18px" },
+  licensePromptActions: { display: "flex", justifyContent: "flex-end", gap: "10px", flexWrap: "wrap" },
 };
 
 

@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
-import { CalendarCheck, CarFront, CreditCard, Image, LayoutGrid, LogOut, MapPin, Package, Tags, Users, Wrench } from "lucide-react";
+import { CalendarCheck, CarFront, CreditCard, Headphones, Image, LayoutGrid, LogOut, MapPin, Package, Tags, Users, Wrench } from "lucide-react";
 import { getAdminTenantSettings } from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
@@ -17,6 +17,7 @@ const items = [
   { to: "payments", label: "Payments", icon: CreditCard },
   { to: "maintenance", label: "Maintenance", icon: Wrench },
   { to: "addons", label: "Add-ons", icon: Package },
+  { to: "support", label: "Support", icon: Headphones },
 ];
 
 export default function AdminLayout() {
