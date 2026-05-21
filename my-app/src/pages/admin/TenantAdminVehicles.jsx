@@ -233,7 +233,7 @@ export default function TenantAdminVehicles() {
             <input
               style={{ ...form.input, width: "100%", maxWidth: "350px" }}
               type="text"
-              placeholder="🔍 Kërko nga backend-i (model, targë...)"
+              placeholder="Search vehicles..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
             />
