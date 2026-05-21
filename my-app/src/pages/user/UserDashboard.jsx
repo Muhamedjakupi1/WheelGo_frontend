@@ -1199,7 +1199,6 @@ function buildNotifications(email, heroVehicle, selectedLocation) {
 function buildHeroSummary(vehicle, currencySettings) {
   return [
     vehicle.categoryName || "Vehicle",
-    vehicle.seats ? `${vehicle.seats} seats` : null,
     vehicle.year || null,
     formatCurrencyPerDay(vehicle.dailyRate, currencySettings),
     vehicle.locationName || "Location not set",
