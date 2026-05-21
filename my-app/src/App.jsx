@@ -23,6 +23,7 @@ import TenantAdminBookings from "./pages/admin/TenantAdminBookings";
 import TenantAdminPayments from "./pages/admin/TenantAdminPayments";
 import TenantAdminAddons from "./pages/admin/TenantAdminAddons";
 import TenantAdminMaintenance from "./pages/admin/TenantAdminMaintenance";
+import TenantAdminSupport from "./pages/admin/TenantAdminSupport";
 
 export default function App() {
   return (
@@ -58,6 +59,7 @@ export default function App() {
         <Route path="payments" element={<TenantAdminPayments />} />
         <Route path="addons" element={<TenantAdminAddons />} />
         <Route path="maintenance" element={<TenantAdminMaintenance />} />
+        <Route path="support" element={<TenantAdminSupport />} />
       </Route>
 
       <Route
