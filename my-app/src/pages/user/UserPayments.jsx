@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { CreditCard, RefreshCw, Search } from "lucide-react";
+import { CreditCard, Download, RefreshCw, Search } from "lucide-react";
 import { getMyBookings } from "../../api/bookingApi";
+import { downloadInvoicePdf } from "../../api/invoiceApi";
 import { getMyPayments } from "../../api/paymentApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { formatCurrencyAmount } from "../../utils/currency";
@@ -10,6 +11,7 @@ export default function UserPayments() {
   const [payments, setPayments] = useState([]);
   const [bookingsById, setBookingsById] = useState({});
   const [loading, setLoading] = useState(true);
+  const [downloadingId, setDownloadingId] = useState(null);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -37,6 +39,21 @@ export default function UserPayments() {
 
     return () => window.clearTimeout(timeout);
   }, [loadPayments, searchTerm]);
+
+  const handleDownloadInvoice = async (payment) => {
+    if (!payment?.bookingId || downloadingId) return;
+
+    try {
+      setDownloadingId(payment.id);
+      setError("");
+      const response = await downloadInvoicePdf(payment.bookingId);
+      saveBlob(response.data, `${payment.invoiceNumber || "invoice"}.pdf`);
+    } catch (err) {
+      setError(err?.response?.data?.message || "Failed to download invoice.");
+    } finally {
+      setDownloadingId(null);
+    }
+  };
 
   return (
     <main style={s.page}>
@@ -100,7 +117,21 @@ export default function UserPayments() {
                       <td style={s.td}>{formatCurrencyAmount(payment.amount, tenantSettings)}</td>
                       <td style={s.td}>{payment.method}</td>
                       <td style={s.td}><span style={badge(payment.status)}>{payment.status}</span></td>
-                      <td style={s.td}>{payment.invoiceNumber || "-"}</td>
+                      <td style={s.td}>
+                        {payment.invoiceNumber ? (
+                          <button
+                            type="button"
+                            style={s.invoiceBtn}
+                            onClick={() => handleDownloadInvoice(payment)}
+                            disabled={downloadingId === payment.id}
+                          >
+                            <Download size={15} />
+                            {downloadingId === payment.id ? "Downloading" : payment.invoiceNumber}
+                          </button>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
                       <td style={s.td}>{formatDate(payment.paidAt)}</td>
                     </tr>
                   );
@@ -133,6 +164,17 @@ function formatCalendarDate(value) {
   });
 }
 
+function saveBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+}
+
 const badge = (status) => ({
   display: "inline-flex",
   borderRadius: "999px",
@@ -159,6 +201,7 @@ const s = {
   th: { textAlign: "left", padding: "14px 12px", color: "#94a3b8", borderBottom: "1px solid #334155", fontSize: "12px", textTransform: "uppercase" },
   td: { padding: "16px 12px", borderBottom: "1px solid rgba(51,65,85,0.65)" },
   bookingCell: { display: "flex", alignItems: "center", gap: "8px", fontWeight: 700 },
+  invoiceBtn: { display: "inline-flex", alignItems: "center", gap: "8px", background: "rgba(59,130,246,0.12)", color: "#93c5fd", border: "1px solid rgba(59,130,246,0.28)", borderRadius: "10px", padding: "8px 10px", cursor: "pointer", fontWeight: 800 },
   empty: { minHeight: "180px", display: "flex", alignItems: "center", justifyContent: "center", color: "#94a3b8", border: "1px dashed #334155", borderRadius: "16px" },
   error: { background: "rgba(127,29,29,0.25)", color: "#fecaca", border: "1px solid #7f1d1d", borderRadius: "14px", padding: "12px 14px" },
 };
