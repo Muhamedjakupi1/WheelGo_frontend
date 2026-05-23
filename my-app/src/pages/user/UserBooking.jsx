@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useState } from "react";
 import {
   Calendar as CalendarIcon,
   CheckCircle2,
@@ -37,32 +37,6 @@ export default function TenantBookingPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
-
-  useEffect(() => {
-    const loadBookings = async (keyword = "") => {
-      try {
-        setLoading(true);
-        const response = await getMyBookings(keyword);
-        setBookings(Array.isArray(response.data) ? response.data : []);
-        setError("");
-      } catch (err) {
-        console.error("Failed to load bookings", err);
-        setError(
-          err?.response?.data?.message ||
-          err?.response?.data?.error ||
-          "Failed to load your bookings."
-        );
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    const delayDebounceFn = setTimeout(() => {
-      loadBookings(searchTerm.trim());
-    }, 500);
-
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm]);
   const [paymentForm, setPaymentForm] = useState({
     method: "CARD",
     cardholderName: "",
@@ -73,10 +47,10 @@ export default function TenantBookingPage() {
     promotionCode: "",
   });
 
-  const loadBookings = async () => {
+  const loadBookings = useCallback(async (keyword = "") => {
     try {
       setLoading(true);
-      const response = await getMyBookings();
+      const response = await getMyBookings(keyword);
       setBookings(Array.isArray(response.data) ? response.data : []);
       setError("");
     } catch (err) {
@@ -89,11 +63,15 @@ export default function TenantBookingPage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    loadBookings();
-  }, []);
+    const delayDebounceFn = setTimeout(() => {
+      loadBookings(searchTerm.trim());
+    }, 500);
+
+    return () => clearTimeout(delayDebounceFn);
+  }, [loadBookings, searchTerm]);
 
   const activeBooking = bookings[0] || null;
   const bookingHistory = bookings.slice(0, 10);
@@ -168,7 +146,7 @@ export default function TenantBookingPage() {
           : `Payment completed. Invoice ${response.data?.invoiceNumber || ""} will be sent by email.`
       );
       setPaymentBooking(null);
-      await loadBookings();
+      await loadBookings(searchTerm.trim());
     } catch (err) {
       setError(err?.response?.data?.message || err?.response?.data?.error || "Payment failed.");
     } finally {
@@ -185,7 +163,7 @@ export default function TenantBookingPage() {
       await cancelMyBooking(booking.id);
       setMessage("Booking cancelled.");
       setExpandedId(null);
-      await loadBookings();
+      await loadBookings(searchTerm.trim());
     } catch (err) {
       setError(err?.response?.data?.message || err?.response?.data?.error || "Failed to cancel booking.");
     }
