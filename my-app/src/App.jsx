@@ -22,6 +22,7 @@ import TenantAdminUsers from "./pages/admin/TenantAdminUsers";
 import TenantAdminBookings from "./pages/admin/TenantAdminBookings";
 import TenantAdminPayments from "./pages/admin/TenantAdminPayments";
 import TenantAdminAddons from "./pages/admin/TenantAdminAddons";
+import TenantAdminPromotions from "./pages/admin/TenantAdminPromotions";
 import TenantAdminMaintenance from "./pages/admin/TenantAdminMaintenance";
 import TenantAdminSupport from "./pages/admin/TenantAdminSupport";
 
@@ -57,6 +58,7 @@ export default function App() {
         <Route path="users" element={<TenantAdminUsers />} />
         <Route path="bookings" element={<TenantAdminBookings />} />
         <Route path="payments" element={<TenantAdminPayments />} />
+        <Route path="promotions" element={<TenantAdminPromotions />} />
         <Route path="addons" element={<TenantAdminAddons />} />
         <Route path="maintenance" element={<TenantAdminMaintenance />} />
         <Route path="support" element={<TenantAdminSupport />} />

@@ -65,6 +65,7 @@ export default function TenantBookingPage() {
     expiryMonth: "",
     expiryYear: "",
     cvv: "",
+    promotionCode: "",
   });
 
   const loadBookings = async () => {
@@ -111,6 +112,7 @@ export default function TenantBookingPage() {
       expiryMonth: "",
       expiryYear: "",
       cvv: "",
+      promotionCode: "",
     });
   };
 
@@ -139,6 +141,7 @@ export default function TenantBookingPage() {
         expiryMonth: paymentForm.expiryMonth,
         expiryYear: paymentForm.expiryYear,
         cvv: paymentForm.cvv,
+        promotionCode: paymentForm.promotionCode.trim() || null,
       });
       setMessage(
         paymentForm.method === "CASH"
@@ -439,8 +442,21 @@ const PaymentModal = ({ booking, form, paying, canPay, tenantSettings, onChange,
       <div style={s.paymentSummary}>
         <PriceLine label="Dates" value={formatDateRange(booking.startDate, booking.endDate)} />
         <PriceLine label="Method" value={form.method === "CASH" ? "Cash" : "Card"} />
+        {Number(booking.discountAmount || 0) > 0 ? (
+          <PriceLine label="Discount" value={`-${formatCurrencyAmount(booking.discountAmount, tenantSettings)}`} />
+        ) : null}
         <PriceLine label="Balance due" value={formatCurrencyAmount(paymentDueAmount(booking), tenantSettings)} />
       </div>
+
+      <label style={s.fieldGroup}>
+        <span style={s.fieldLabel}>Promotion Code</span>
+        <input
+          style={s.input}
+          value={form.promotionCode}
+          onChange={(e) => onChange("promotionCode", e.target.value)}
+          placeholder="WheelGo-10"
+        />
+      </label>
 
       <div style={s.methodToggle}>
         <button type="button" style={{ ...s.methodBtn, ...(form.method === "CARD" ? s.methodBtnActive : {}) }} onClick={() => onChange("method", "CARD")}>

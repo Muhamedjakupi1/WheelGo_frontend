@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink, Outlet, useNavigate, useParams } from "react-router-dom";
-import { CalendarCheck, CarFront, CreditCard, Headphones, Image, LayoutGrid, LogOut, MapPin, Package, Tags, Users, Wrench } from "lucide-react";
+import { BadgePercent, CalendarCheck, CarFront, CreditCard, Headphones, Image, LayoutGrid, LogOut, MapPin, Package, Tags, Users, Wrench } from "lucide-react";
 import { getAdminTenantSettings } from "../../api/adminApi";
 import { useAuth } from "../../context/AuthContext";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
@@ -15,6 +15,7 @@ const items = [
   { to: "users", label: "Users", icon: Users },
   { to: "bookings", label: "Bookings", icon: CalendarCheck },
   { to: "payments", label: "Payments", icon: CreditCard },
+  { to: "promotions", label: "Promotions", icon: BadgePercent },
   { to: "maintenance", label: "Maintenance", icon: Wrench },
   { to: "addons", label: "Add-ons", icon: Package },
   { to: "support", label: "Support", icon: Headphones },
