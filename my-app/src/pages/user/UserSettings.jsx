@@ -1,6 +1,6 @@
-import React, { useState } from "react";
-import { Lock, Bell, Shield } from "lucide-react";
-import { updateMySettingsPassword } from "../../api/userSettingsApi";
+import React, { useEffect, useState } from "react";
+import { Lock, Bell, Shield, CheckCircle2, Clock3 } from "lucide-react";
+import { getMySettings, updateMySettingsPassword } from "../../api/userSettingsApi";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import {
   isValidPassword,
@@ -16,6 +16,33 @@ export default function TenantUserSettings() {
   });
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState({ type: "", text: "" });
+  const [settings, setSettings] = useState(null);
+  const [loadingSettings, setLoadingSettings] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+
+    getMySettings()
+      .then((response) => {
+        if (active) {
+          setSettings(response.data);
+        }
+      })
+      .catch(() => {
+        if (active) {
+          setSettings(null);
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setLoadingSettings(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const handleChange = (field, value) => {
     setForm((current) => ({ ...current, [field]: value }));
@@ -48,10 +75,11 @@ export default function TenantUserSettings() {
     setSaving(true);
 
     try {
-      await updateMySettingsPassword({
+      const response = await updateMySettingsPassword({
         currentPassword: form.currentPassword,
         newPassword: form.newPassword,
       });
+      setSettings(response.data);
 
       setForm({
         currentPassword: "",
@@ -89,6 +117,23 @@ export default function TenantUserSettings() {
           {message.text ? (
             <div style={message.type === "success" ? s.successMessage : s.errorMessage}>{message.text}</div>
           ) : null}
+
+          <div style={s.securitySummary}>
+            <div style={s.summaryItem}>
+              <CheckCircle2 size={18} color={settings?.passwordChanged ? "#22c55e" : "#94a3b8"} />
+              <span>{settings?.passwordChanged ? "Password has been changed" : "Password has not been changed yet"}</span>
+            </div>
+            <div style={s.summaryItem}>
+              <Clock3 size={18} color="#94a3b8" />
+              <span>
+                {loadingSettings
+                  ? "Loading last change..."
+                  : settings?.updatedAt
+                    ? `Last changed: ${formatDateTime(settings.updatedAt)}`
+                    : "Last changed: Not available"}
+              </span>
+            </div>
+          </div>
 
           <form style={s.cardBody} onSubmit={handleSubmit}>
             <div style={s.inputGroup}>
@@ -153,6 +198,15 @@ const SettingsOption = ({ icon, title, desc, active }) => (
   </div>
 );
 
+const formatDateTime = (value) =>
+  new Intl.DateTimeFormat(undefined, {
+    year: "numeric",
+    month: "short",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date(value));
+
 const s = {
   mainContent: { width: "100%", color: "#fff" },
   mainContentCompact: { paddingBottom: "24px" },
@@ -168,6 +222,23 @@ const s = {
   cardHeader: { display: "flex", alignItems: "center", gap: "15px", marginBottom: "25px" },
   cardTitle: { fontSize: "20px", fontWeight: "600", margin: 0 },
   cardBody: { display: "flex", flexDirection: "column", gap: "20px" },
+  securitySummary: {
+    display: "flex",
+    flexWrap: "wrap",
+    gap: "12px",
+    marginBottom: "20px",
+  },
+  summaryItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    background: "#161f2e",
+    border: "1px solid #2d3748",
+    borderRadius: "12px",
+    color: "#cbd5e1",
+    fontSize: "14px",
+    padding: "10px 12px",
+  },
   successMessage: {
     marginBottom: "18px",
     padding: "12px 14px",

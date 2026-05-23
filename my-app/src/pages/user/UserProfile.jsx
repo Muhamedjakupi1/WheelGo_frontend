@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import { User, Mail, MapPin, Calendar, Car, Star, Edit3, Camera, Save, X } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
-import { getMyProfile, updateMyProfile } from "../../api/userProfileApi";
+import { getMyProfile, updateMyProfile, uploadMyAvatar } from "../../api/userProfileApi";
+import { getMyBookings } from "../../api/bookingApi";
 import {
   getMyDriverLicense,
   verifyMyDriverLicense,
@@ -30,6 +31,7 @@ export default function TenantUserProfile() {
   const { user } = useAuth();
   const isCompact = useIsCompactLayout(960);
   const [profile, setProfile] = useState(null);
+  const [bookings, setBookings] = useState([]);
   const [form, setForm] = useState(emptyForm);
   const [license, setLicense] = useState(null);
   const [licenseForm, setLicenseForm] = useState(emptyLicenseForm);
@@ -38,6 +40,7 @@ export default function TenantUserProfile() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [editing, setEditing] = useState(false);
+  const [avatarUploading, setAvatarUploading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [licenseVerifying, setLicenseVerifying] = useState(false);
@@ -52,12 +55,14 @@ export default function TenantUserProfile() {
 
   const loadProfile = async () => {
     try {
-      const [{ data: profileData }, { data: licenseData }] = await Promise.all([
+      const [{ data: profileData }, { data: licenseData }, { data: bookingsData }] = await Promise.all([
         getMyProfile(),
         getMyDriverLicense(),
+        getMyBookings(),
       ]);
       applyProfile(profileData);
       applyLicense(licenseData);
+      setBookings(Array.isArray(bookingsData) ? bookingsData : []);
       setError("");
     } catch (err) {
       console.error("Failed to load profile", err);
@@ -143,6 +148,25 @@ export default function TenantUserProfile() {
     }
   };
 
+  const handleAvatarUpload = async (file) => {
+    if (!file || avatarUploading) return;
+
+    setAvatarUploading(true);
+    setError("");
+    setSuccess("");
+
+    try {
+      const { data } = await uploadMyAvatar(file);
+      applyProfile(data);
+      setSuccess("Profile photo updated.");
+    } catch (err) {
+      console.error("Failed to upload avatar", err);
+      setError(readError(err, "Failed to upload profile photo."));
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
+
   const fullName =
     profile && (profile.firstName || profile.lastName)
       ? `${profile.firstName || ""} ${profile.lastName || ""}`.trim()
@@ -153,14 +177,19 @@ export default function TenantUserProfile() {
       ? [profile.city, profile.country].filter(Boolean).join(", ")
       : "-";
 
-const memberSince = profile?.memberSince
-  ? new Date(profile.memberSince).toLocaleDateString()
-  : "-";  const totalRides = Number.isFinite(Number(profile?.totalRides)) ? String(profile.totalRides) : "0";
+  const memberSince = profile?.memberSince
+    ? new Date(profile.memberSince).toLocaleDateString()
+    : "-";
+  const confirmedRideCount = bookings.filter((booking) => booking?.status === "CONFIRMED").length;
+  const totalRides = String(confirmedRideCount);
   const userRating =
     typeof profile?.averageRating === "number" && Number.isFinite(profile.averageRating)
       ? profile.averageRating.toFixed(1)
       : "No rating yet";
   const licenseStatus = license?.verified ? "Verified" : "Pending verification";
+  const avatarSrc =
+    resolveMediaUrl(profile?.avatarUrl || form.avatarUrl) ||
+    `https://i.pravatar.cc/150?u=${user?.email || "user"}`;
 
   const handleSelectLicenseImage = (side, file) => {
     if (!file) return;
@@ -228,14 +257,24 @@ const memberSince = profile?.memberSince
         <div style={{ ...s.profileInfoSection, ...(isCompact ? s.profileInfoSectionCompact : {}) }}>
           <div style={s.avatarWrapper}>
             <img
-              src={profile?.avatarUrl || form.avatarUrl || "https://i.pravatar.cc/150?u=floyd"}
+              src={avatarSrc}
               alt="Profile"
               style={s.largeAvatar}
             />
-            <div style={s.editAvatarBtn}><Camera size={16} /></div>
+            <label style={s.editAvatarBtn} title="Change profile photo">
+              <Camera size={16} />
+              <input
+                type="file"
+                accept="image/*"
+                style={{ display: "none" }}
+                disabled={avatarUploading}
+                onChange={(event) => handleAvatarUpload(event.target.files?.[0] || null)}
+              />
+            </label>
           </div>
           <div style={s.userMeta}>
             <h1 style={s.userName}>{fullName}</h1>
+            {avatarUploading ? <p style={s.successText}>Uploading profile photo...</p> : null}
             {success ? <p style={s.successText}>{success}</p> : null}
             {error ? <p style={s.errorText}>{error}</p> : null}
           </div>
@@ -256,7 +295,7 @@ const memberSince = profile?.memberSince
         </div>
       </header>
 
-      <div style={s.profileGrid}>
+      <div style={{ ...s.profileGrid, ...(isCompact ? s.profileGridCompact : {}) }}>
         <div style={{ ...s.statsContainer, ...(isCompact ? s.statsContainerCompact : {}) }}>
           <StatCard icon={<Car size={20} color="#3b82f6" />} label="Total Rides" value={totalRides} />
           <StatCard icon={<Calendar size={20} color="#10b981" />} label="Member Since" value={memberSince} />
@@ -271,7 +310,6 @@ const memberSince = profile?.memberSince
               <FormField label="Last Name" value={form.lastName} onChange={(value) => handleChange("lastName", value)} />
               <StaticField label="Email" value={user?.email || "-"} />
               <FormField label="Phone" value={form.phone} onChange={(value) => handleChange("phone", value)} />
-              <FormField label="Avatar URL" value={form.avatarUrl} onChange={(value) => handleChange("avatarUrl", value)} />
             </div>
           ) : (
             <div style={s.infoList}>
@@ -283,26 +321,7 @@ const memberSince = profile?.memberSince
           )}
         </section>
 
-        <section style={s.card}>
-          <h2 style={s.cardTitle}>Profile Details</h2>
-          {editing ? (
-            <div style={s.formGrid}>
-              <FormField label="Date of Birth" type="date" value={form.dateOfBirth} onChange={(value) => handleChange("dateOfBirth", value)} />
-              <FormField label="Address" value={form.address} onChange={(value) => handleChange("address", value)} />
-              <FormField label="City" value={form.city} onChange={(value) => handleChange("city", value)} />
-              <FormField label="Country" value={form.country} onChange={(value) => handleChange("country", value)} />
-            </div>
-          ) : (
-            <div style={s.infoList}>
-              <InfoRow icon={<Calendar size={18} />} label="Date of Birth" value={profile?.dateOfBirth || "-"} />
-              <InfoRow icon={<MapPin size={18} />} label="Address" value={profile?.address || "-"} />
-              <InfoRow icon={<MapPin size={18} />} label="City" value={profile?.city || "-"} />
-              <InfoRow icon={<MapPin size={18} />} label="Country" value={profile?.country || "-"} />
-            </div>
-          )}
-        </section>
-
-        <section style={{ ...s.card, ...(isCompact ? s.licenseCardCompact : { gridColumn: "span 2" }) }}>
+        <section style={{ ...s.card, ...(!isCompact ? s.licenseCardWide : s.licenseCardCompact) }}>
           <div style={{ ...s.licenseHeader, ...(isCompact ? s.licenseHeaderCompact : {}) }}>
             <div>
               <h2 style={s.cardTitle}>Driver License Verification</h2>
@@ -318,7 +337,7 @@ const memberSince = profile?.memberSince
           ) : null}
 
           <div style={s.licenseDetailsPanel}>
-            <div style={s.formGrid}>
+            <div style={{ ...s.licenseFormGrid, ...(isCompact ? s.licenseFormGridCompact : {}) }}>
               <FormField
                 label="License Number"
                 value={licenseForm.licenseNumber}
@@ -513,7 +532,15 @@ const s = {
   },
   successText: { color: "#34d399", margin: "8px 0 0 0", fontSize: "14px" },
   errorText: { color: "#f87171", margin: "8px 0 0 0", fontSize: "14px" },
-  profileGrid: { display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 320px), 1fr))", gap: "25px" },
+  profileGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "25px",
+    alignItems: "start",
+  },
+  profileGridCompact: {
+    gridTemplateColumns: "1fr",
+  },
   statsContainer: { gridColumn: "1 / -1", display: "flex", gap: "20px", flexWrap: "wrap" },
   statsContainerCompact: { gap: "14px" },
   statCard: {
@@ -534,6 +561,14 @@ const s = {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
     gap: "16px"
+  },
+  licenseFormGrid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(3, minmax(0, 1fr))",
+    gap: "16px"
+  },
+  licenseFormGridCompact: {
+    gridTemplateColumns: "1fr",
   },
   fieldGroup: {
     display: "flex",
@@ -703,6 +738,9 @@ const s = {
   },
   licenseCardCompact: {
     gridColumn: "auto",
+  },
+  licenseCardWide: {
+    gridColumn: "span 2",
   },
   verificationMeta: {
     marginTop: "18px",

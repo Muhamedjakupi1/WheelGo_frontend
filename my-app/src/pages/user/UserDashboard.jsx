@@ -3,7 +3,6 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   Search,
   MapPin,
-  Bell,
   ChevronDown,
   X,
   CalendarDays,
@@ -25,6 +24,7 @@ import { getMyDriverLicense } from "../../api/driverLicenseApi";
 import { payForBooking } from "../../api/paymentApi";
 import { getVehicleReviews } from "../../api/reviewApi";
 import { getVehicles } from "../../api/vehicleApi";
+import { getMyProfile } from "../../api/userProfileApi";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount, formatCurrencyPerDay } from "../../utils/currency";
 import { resolveMediaUrl } from "../../utils/media";
@@ -44,7 +44,7 @@ export default function TenantUserDashboard() {
   const [search, setSearch] = useState("");
   const [selectedLocation, setSelectedLocation] = useState(DEFAULT_LOCATION);
   const [detailsVehicle, setDetailsVehicle] = useState(null);
-  const [showNotifications, setShowNotifications] = useState(false);
+  const [profile, setProfile] = useState(null);
 
   useEffect(() => {
     const loadVehicles = async (keyword = "") => {
@@ -67,6 +67,24 @@ export default function TenantUserDashboard() {
 
     return () => clearTimeout(delayDebounceFn);
   }, [search]);
+
+  useEffect(() => {
+    let active = true;
+
+    getMyProfile()
+      .then((response) => {
+        if (active) {
+          setProfile(response.data);
+        }
+      })
+      .catch((err) => {
+        console.error("Failed to load profile avatar", err);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, []);
 
   const locations = useMemo(() => {
     const uniqueNames = [
@@ -108,11 +126,9 @@ export default function TenantUserDashboard() {
 
   const heroVehicle = filteredVehicles[0] || vehicles[0] || null;
   const featuredVehicles = filteredVehicles.slice(0, 6);
-  const notificationItems = buildNotifications(
-    user?.email,
-    heroVehicle,
-    selectedLocation
-  );
+  const avatarUrl =
+    resolveMediaUrl(profile?.avatarUrl) ||
+    `https://i.pravatar.cc/100?u=${user?.email || "user"}`;
 
   return (
     <div style={ds.container}>
@@ -154,43 +170,6 @@ export default function TenantUserDashboard() {
             <ChevronDown size={15} color="#3b82f6" style={ds.selectChevron} />
           </div>
 
-          <div style={ds.notificationWrap}>
-            <button
-              type="button"
-              style={ds.iconButton}
-              onClick={() => setShowNotifications((current) => !current)}
-              aria-label="Toggle notifications"
-            >
-              <Bell size={20} />
-              <span style={ds.notificationDot} />
-            </button>
-
-            {showNotifications ? (
-              <div style={ds.notificationPanel}>
-                <div style={ds.notificationHeader}>
-                  <span style={ds.notificationTitle}>Notifications</span>
-                  <button
-                    type="button"
-                    style={ds.closeIconButton}
-                    onClick={() => setShowNotifications(false)}
-                    aria-label="Close notifications"
-                  >
-                    <X size={16} />
-                  </button>
-                </div>
-
-                <div style={ds.notificationList}>
-                  {notificationItems.map((item) => (
-                    <div key={item.title} style={ds.notificationItem}>
-                      <div style={ds.notificationItemTitle}>{item.title}</div>
-                      <div style={ds.notificationItemText}>{item.text}</div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            ) : null}
-          </div>
-
           <button
             type="button"
             style={ds.avatarButton}
@@ -198,7 +177,7 @@ export default function TenantUserDashboard() {
             aria-label="Open profile"
           >
             <img
-              src={`https://i.pravatar.cc/100?u=${user?.email || "user"}`}
+              src={avatarUrl}
               alt="avatar"
               style={ds.avatar}
             />
@@ -516,7 +495,7 @@ function VehicleDetailsModal({
       }
       setShowLicensePrompt(true);
       return false;
-    } catch (error) {
+    } catch {
       setShowLicensePrompt(true);
       return false;
     } finally {
@@ -1307,29 +1286,6 @@ function GenericAddonQuantityRow({ label, description, price, available, type, v
 // --------------------------------------------------------------
 // Funksione ndihmëse jashtë komponentëve
 // --------------------------------------------------------------
-function buildNotifications(email, heroVehicle, selectedLocation) {
-  return [
-    {
-      title: "Profile shortcut",
-      text: email
-        ? `Signed in as ${email}. Click the avatar to open your profile.`
-        : "Open your profile from the avatar.",
-    },
-    {
-      title: "Location filter",
-      text: selectedLocation
-        ? `Vehicle results are currently filtered by ${selectedLocation}.`
-        : "Choose a location to narrow your vehicle list.",
-    },
-    {
-      title: "Featured car",
-      text: heroVehicle
-        ? `${heroVehicle.make} ${heroVehicle.model} is currently highlighted on your dashboard.`
-        : "Vehicles will appear here once the fleet is available.",
-    },
-  ];
-}
-
 function buildHeroSummary(vehicle, currencySettings) {
   return [
     vehicle.categoryName || "Vehicle",
@@ -1453,7 +1409,6 @@ const ds = {
     right: "12px",
     pointerEvents: "none",
   },
-  notificationWrap: { position: "relative" },
   iconButton: {
     width: "42px",
     height: "42px",
@@ -1467,34 +1422,6 @@ const ds = {
     cursor: "pointer",
     position: "relative",
   },
-  notificationDot: {
-    position: "absolute",
-    top: "10px",
-    right: "10px",
-    width: "8px",
-    height: "8px",
-    borderRadius: "999px",
-    background: "#3b82f6",
-  },
-  notificationPanel: {
-    position: "absolute",
-    top: "52px",
-    right: 0,
-    width: "300px",
-    background: "#0f172a",
-    border: "1px solid #1e293b",
-    borderRadius: "18px",
-    padding: "16px",
-    boxShadow: "0 20px 45px rgba(0,0,0,0.35)",
-    zIndex: 20,
-  },
-  notificationHeader: {
-    display: "flex",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: "12px",
-  },
-  notificationTitle: { fontWeight: 700 },
   closeIconButton: {
     border: "none",
     background: "transparent",
@@ -1504,15 +1431,6 @@ const ds = {
     alignItems: "center",
     justifyContent: "center",
   },
-  notificationList: { display: "grid", gap: "10px" },
-  notificationItem: {
-    background: "#111827",
-    border: "1px solid #1f2937",
-    borderRadius: "14px",
-    padding: "12px",
-  },
-  notificationItemTitle: { fontSize: "13px", fontWeight: 700, marginBottom: "6px" },
-  notificationItemText: { color: "#94a3b8", fontSize: "13px", lineHeight: 1.45 },
   avatarButton: {
     border: "none",
     background: "transparent",
