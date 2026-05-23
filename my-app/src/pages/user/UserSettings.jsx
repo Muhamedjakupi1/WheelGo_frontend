@@ -133,27 +133,6 @@ export default function TenantUserSettings() {
             </button>
           </form>
         </section>
-
-        <section style={{ ...s.preferencesCard, ...(isCompact ? s.cardCompact : {}) }}>
-          <div style={s.cardHeader}>
-            <Bell size={22} color="#f59e0b" />
-            <h2 style={s.cardTitle}>Preferences & Notifications</h2>
-          </div>
-          <div style={s.optionsList}>
-            <SettingsOption
-              icon={<Bell size={20} />}
-              title="Email Notifications"
-              desc="Receive updates about your bookings via email"
-              active={true}
-            />
-            <SettingsOption
-              icon={<Shield size={20} />}
-              title="Two-Factor Authentication"
-              desc="Add an extra layer of security to your account"
-              active={false}
-            />
-          </div>
-        </section>
       </div>
     </div>
   );

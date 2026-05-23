@@ -153,7 +153,13 @@ export default function TenantUserProfile() {
       ? [profile.city, profile.country].filter(Boolean).join(", ")
       : "-";
 
-  const memberSince = user?.createdAt ? new Date(user.createdAt).getFullYear() : "-";
+const memberSince = profile?.memberSince
+  ? new Date(profile.memberSince).toLocaleDateString()
+  : "-";  const totalRides = Number.isFinite(Number(profile?.totalRides)) ? String(profile.totalRides) : "0";
+  const userRating =
+    typeof profile?.averageRating === "number" && Number.isFinite(profile.averageRating)
+      ? profile.averageRating.toFixed(1)
+      : "No rating yet";
   const licenseStatus = license?.verified ? "Verified" : "Pending verification";
 
   const handleSelectLicenseImage = (side, file) => {
@@ -252,9 +258,9 @@ export default function TenantUserProfile() {
 
       <div style={s.profileGrid}>
         <div style={{ ...s.statsContainer, ...(isCompact ? s.statsContainerCompact : {}) }}>
-          <StatCard icon={<Car size={20} color="#3b82f6" />} label="Total Rides" value="0" />
+          <StatCard icon={<Car size={20} color="#3b82f6" />} label="Total Rides" value={totalRides} />
           <StatCard icon={<Calendar size={20} color="#10b981" />} label="Member Since" value={memberSince} />
-          <StatCard icon={<Star size={20} color="#f59e0b" />} label="User Rating" value="-" />
+          <StatCard icon={<Star size={20} color="#f59e0b" />} label="User Rating" value={userRating} />
         </div>
 
         <section style={s.card}>

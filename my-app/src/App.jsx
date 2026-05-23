@@ -10,7 +10,7 @@ import TenantUserDashboard from "./pages/user/UserDashboard";
 import TenantUserBooking from "./pages/user/UserBooking";
 import TenantUserPayments from "./pages/user/UserPayments";
 import TenantUserSettings from "./pages/user/UserSettings";
-import TenantUserProfile from "./pages/user/UserPorfile";
+import TenantUserProfile from "./pages/user/UserProfile";
 import TenantUserSupport from "./pages/user/UserSupport";
 import TenantUserReviews from "./pages/user/UserReviews";
 import AdminLayout from "./pages/admin/AdminLayout";
