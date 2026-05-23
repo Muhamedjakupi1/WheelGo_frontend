@@ -1,11 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
-import { Banknote, CheckCircle2, CreditCard, Download, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { Banknote, CheckCircle2, CreditCard, Download, RefreshCw, RotateCcw, Save, Search } from "lucide-react";
 import { getAdminBookings } from "../../api/adminApi";
 import { downloadInvoicePdf } from "../../api/invoiceApi";
-import { confirmCashPayment, getAdminPayments, refundPayment } from "../../api/paymentApi";
+import { confirmCashPayment, getAdminPayments, refundPayment, updateAdminPaymentStatus } from "../../api/paymentApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { formatCurrencyAmount } from "../../utils/currency";
 import { badge, button, card, emptyState, layout, palette, table } from "./adminStyles";
+
+const PAYMENT_STATUSES = ["PENDING", "PAID", "FAILED", "REFUNDED"];
 
 export default function TenantAdminPayments() {
   const { settings: tenantSettings } = useTenantSettings();
@@ -15,6 +17,8 @@ export default function TenantAdminPayments() {
   const [confirmingId, setConfirmingId] = useState(null);
   const [downloadingId, setDownloadingId] = useState(null);
   const [refundingId, setRefundingId] = useState(null);
+  const [updatingId, setUpdatingId] = useState(null);
+  const [statusDrafts, setStatusDrafts] = useState({});
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
 
@@ -42,6 +46,16 @@ export default function TenantAdminPayments() {
 
     return () => window.clearTimeout(timeout);
   }, [loadPayments, searchTerm]);
+
+  useEffect(() => {
+    setStatusDrafts((current) => {
+      const next = { ...current };
+      payments.forEach((payment) => {
+        next[payment.id] = current[payment.id] || payment.status;
+      });
+      return next;
+    });
+  }, [payments]);
 
   const handleConfirmCashPayment = async (paymentId) => {
     if (!paymentId || confirmingId) return;
@@ -76,6 +90,25 @@ export default function TenantAdminPayments() {
       setError(err?.response?.data?.message || err?.response?.data?.error || "Failed to refund payment.");
     } finally {
       setRefundingId(null);
+    }
+  };
+
+  const handleUpdatePaymentStatus = async (paymentId) => {
+    const nextStatus = statusDrafts[paymentId];
+    if (!paymentId || !nextStatus || updatingId) return;
+
+    try {
+      setUpdatingId(paymentId);
+      setError("");
+      const response = await updateAdminPaymentStatus(paymentId, nextStatus);
+      setPayments((current) =>
+        current.map((payment) => (payment.id === paymentId ? { ...payment, ...response.data } : payment))
+      );
+      await loadPayments(searchTerm);
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.response?.data?.error || "Failed to update payment status.");
+    } finally {
+      setUpdatingId(null);
     }
   };
 
@@ -155,6 +188,7 @@ export default function TenantAdminPayments() {
                   <th style={table.headCell}>Method</th>
                   <th style={table.headCell}>Invoice</th>
                   <th style={table.headCell}>Paid at</th>
+                  <th style={table.headCell}>Status edit</th>
                   <th style={table.headCell}>Action</th>
                 </tr>
               </thead>
@@ -206,6 +240,51 @@ export default function TenantAdminPayments() {
                         )}
                       </td>
                       <td style={table.cell}>{formatDate(payment.paidAt)}</td>
+                      <td style={table.cell}>
+                        <div style={{ display: "grid", gap: "10px", minWidth: "160px" }}>
+                          <select
+                            value={statusDrafts[payment.id] || payment.status}
+                            onChange={(event) =>
+                              setStatusDrafts((current) => ({ ...current, [payment.id]: event.target.value }))
+                            }
+                            style={{
+                              minHeight: "38px",
+                              borderRadius: "10px",
+                              border: `1px solid ${palette.border}`,
+                              background: "rgba(15, 23, 42, 0.78)",
+                              color: palette.text,
+                              padding: "0 10px",
+                            }}
+                          >
+                            {PAYMENT_STATUSES.map((status) => (
+                              <option key={status} value={status}>
+                                {status}
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            type="button"
+                            onClick={() => handleUpdatePaymentStatus(payment.id)}
+                            disabled={updatingId === payment.id || (statusDrafts[payment.id] || payment.status) === payment.status}
+                            style={{
+                              ...button.secondary,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              gap: "8px",
+                              opacity:
+                                updatingId === payment.id || (statusDrafts[payment.id] || payment.status) === payment.status ? 0.65 : 1,
+                              cursor:
+                                updatingId === payment.id || (statusDrafts[payment.id] || payment.status) === payment.status
+                                  ? "not-allowed"
+                                  : "pointer",
+                            }}
+                          >
+                            <Save size={15} />
+                            {updatingId === payment.id ? "Saving..." : "Save status"}
+                          </button>
+                        </div>
+                      </td>
                       <td style={table.cell}>
                         {canConfirm ? (
                           <button

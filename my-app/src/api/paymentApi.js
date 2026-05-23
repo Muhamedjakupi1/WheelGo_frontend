@@ -8,3 +8,5 @@ export const getAdminPayments = (keyword = "") =>
   http.get("/api/v1/admin/payments", { params: keyword ? { keyword } : {} });
 export const confirmCashPayment = (paymentId) => http.patch(`/api/v1/admin/payments/${paymentId}/confirm`);
 export const refundPayment = (paymentId) => http.patch(`/api/v1/admin/payments/${paymentId}/refund`);
+export const updateAdminPaymentStatus = (paymentId, status) =>
+  http.patch(`/api/v1/admin/payments/${paymentId}`, { status });

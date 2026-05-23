@@ -108,11 +108,12 @@ export default function TenantBookingPage() {
         paymentForm.cvv.replace(/\D/g, "").length >= 3));
 
   const openPayment = (booking) => {
+    const cashOnly = bookingRequiresCash(booking);
     setPaymentBooking(booking);
     setMessage("");
     setError("");
     setPaymentForm({
-      method: "CARD",
+      method: cashOnly ? "CASH" : "CARD",
       cardholderName: "",
       cardNumber: "",
       expiryMonth: "",
@@ -561,12 +562,20 @@ const PaymentModal = ({ booking, form, paying, canPay, tenantSettings, onChange,
 
       <div style={s.paymentSummary}>
         <PriceLine label="Dates" value={formatDateRange(booking.startDate, booking.endDate)} />
+        <PriceLine label="Booking total" value={formatCurrencyAmount(booking.totalPrice, tenantSettings)} />
+        <PriceLine label="Approved add-ons" value={formatCurrencyAmount(booking.addonPrice, tenantSettings)} />
         <PriceLine label="Method" value={form.method === "CASH" ? "Cash" : "Card"} />
         {Number(booking.discountAmount || 0) > 0 ? (
           <PriceLine label="Discount" value={`-${formatCurrencyAmount(booking.discountAmount, tenantSettings)}`} />
         ) : null}
         <PriceLine label="Balance due" value={formatCurrencyAmount(paymentDueAmount(booking), tenantSettings)} />
       </div>
+
+      {bookingRequiresCash(booking) ? (
+        <div style={s.cashNotice}>
+          This booking has a special request, so only cash payment is allowed. The total above already includes any admin-approved special-request charge.
+        </div>
+      ) : null}
 
       <label style={s.fieldGroup}>
         <span style={s.fieldLabel}>Promotion Code</span>
@@ -579,7 +588,16 @@ const PaymentModal = ({ booking, form, paying, canPay, tenantSettings, onChange,
       </label>
 
       <div style={s.methodToggle}>
-        <button type="button" style={{ ...s.methodBtn, ...(form.method === "CARD" ? s.methodBtnActive : {}) }} onClick={() => onChange("method", "CARD")}>
+        <button
+          type="button"
+          style={{ ...s.methodBtn, ...(form.method === "CARD" ? s.methodBtnActive : {}), ...(bookingRequiresCash(booking) ? s.disabledBtn : {}) }}
+          onClick={() => {
+            if (!bookingRequiresCash(booking)) {
+              onChange("method", "CARD");
+            }
+          }}
+          disabled={bookingRequiresCash(booking)}
+        >
           Card
         </button>
         <button type="button" style={{ ...s.methodBtn, ...(form.method === "CASH" ? s.methodBtnActive : {}) }} onClick={() => onChange("method", "CASH")}>
@@ -691,6 +709,10 @@ function formatPaymentStatus(booking) {
     return `${method} pending`;
   }
   return `${method} ${formatStatus(booking.paymentStatus).toLowerCase()}`;
+}
+
+function bookingRequiresCash(booking) {
+  return Boolean(booking?.specialRequest && String(booking.specialRequest).trim());
 }
 
 function paymentDueAmount(booking) {

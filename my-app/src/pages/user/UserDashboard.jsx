@@ -567,6 +567,9 @@ function VehicleDetailsModal({
         text: "Booking saved. Complete the payment to finish.",
       });
       setCreatedBooking(response.data);
+      if (bookingRequiresCash(response.data)) {
+        setPaymentForm((current) => ({ ...current, method: "CASH" }));
+      }
       setPanelMode("payment");
     } catch (error) {
       console.error("Failed to save booking", error);
@@ -961,11 +964,18 @@ function VehicleDetailsModal({
                     </div>
                   </div>
                   <PriceLine label="Booking total" value={formatCurrencyAmount(createdBooking?.totalPrice || finalAmount, currencySettings)} />
+                  <PriceLine label="Approved add-ons" value={formatCurrencyAmount(createdBooking?.addonPrice || addonsAmount, currencySettings)} />
                   {Number(createdBooking?.discountAmount || 0) > 0 ? (
                     <PriceLine label="Discount" value={`-${formatCurrencyAmount(createdBooking.discountAmount, currencySettings)}`} />
                   ) : null}
                   <PriceLine label="Payment method" value={paymentForm.method === "CASH" ? "Cash" : "Card"} />
                 </div>
+
+                {bookingRequiresCash(createdBooking) ? (
+                  <div style={ds.infoBannerCompact}>
+                    This booking has a special request, so only cash payment is allowed. The total above already includes any admin-approved special-request charge.
+                  </div>
+                ) : null}
 
                 <label style={ds.fieldGroup}>
                   <span style={ds.fieldLabel}>Promotion Code</span>
@@ -980,8 +990,17 @@ function VehicleDetailsModal({
                 <div style={ds.methodToggle}>
                   <button
                     type="button"
-                    style={{ ...ds.methodBtn, ...(paymentForm.method === "CARD" ? ds.methodBtnActive : {}) }}
-                    onClick={() => updatePaymentField("method", "CARD")}
+                    style={{
+                      ...ds.methodBtn,
+                      ...(paymentForm.method === "CARD" ? ds.methodBtnActive : {}),
+                      ...(bookingRequiresCash(createdBooking) ? ds.disabledActionBtn : {}),
+                    }}
+                    onClick={() => {
+                      if (!bookingRequiresCash(createdBooking)) {
+                        updatePaymentField("method", "CARD");
+                      }
+                    }}
+                    disabled={bookingRequiresCash(createdBooking)}
                   >
                     Card
                   </button>
@@ -1365,6 +1384,10 @@ function getTodayDateString() {
 
 function isDriverLicenseVerified(license) {
   return Boolean(license?.isVerified ?? license?.verified ?? license?.verifiedAt);
+}
+
+function bookingRequiresCash(booking) {
+  return Boolean(booking?.specialRequest && String(booking.specialRequest).trim());
 }
 
 // --------------------------------------------------------------
