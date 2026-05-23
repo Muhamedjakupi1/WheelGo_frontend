@@ -9,10 +9,12 @@ import {
   MapPin,
   Receipt,
   Search,
+  Star,
   X,
 } from "lucide-react";
 import { cancelMyBooking, getMyBookings } from "../../api/bookingApi";
 import { payForBooking } from "../../api/paymentApi";
+import { createReview } from "../../api/reviewApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount } from "../../utils/currency";
@@ -29,6 +31,9 @@ export default function TenantBookingPage() {
   const [paying, setPaying] = useState(false);
   const [expandedId, setExpandedId] = useState(null);
   const [paymentBooking, setPaymentBooking] = useState(null);
+  const [reviewBooking, setReviewBooking] = useState(null);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
+  const [reviewForm, setReviewForm] = useState({ rating: 5, comment: "" });
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -92,6 +97,7 @@ export default function TenantBookingPage() {
 
   const activeBooking = bookings[0] || null;
   const bookingHistory = bookings.slice(0, 10);
+  const pendingReviewBooking = bookings.find(canReviewBooking) || null;
   const canPay =
     paymentBooking &&
     (paymentForm.method === "CASH" ||
@@ -119,6 +125,18 @@ export default function TenantBookingPage() {
   const closePayment = () => {
     if (paying) return;
     setPaymentBooking(null);
+  };
+
+  const openReview = (booking) => {
+    setReviewBooking(booking);
+    setReviewForm({ rating: 5, comment: "" });
+    setMessage("");
+    setError("");
+  };
+
+  const closeReview = () => {
+    if (reviewSubmitting) return;
+    setReviewBooking(null);
   };
 
   const updatePaymentField = (field, value) => {
@@ -172,6 +190,29 @@ export default function TenantBookingPage() {
     }
   };
 
+  const handleSubmitReview = async () => {
+    if (!reviewBooking || reviewSubmitting) return;
+
+    try {
+      setReviewSubmitting(true);
+      setError("");
+      setMessage("");
+      await createReview({
+        bookingId: reviewBooking.id,
+        vehicleId: reviewBooking.vehicleId,
+        rating: Number(reviewForm.rating),
+        comment: reviewForm.comment.trim() || null,
+      });
+      setMessage("Review submitted. Thank you for sharing your experience.");
+      setReviewBooking(null);
+      await loadBookings();
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.response?.data?.error || "Failed to submit review.");
+    } finally {
+      setReviewSubmitting(false);
+    }
+  };
+
   return (
     <div>
       <main style={{ ...s.mainContent, ...(isCompact ? s.mainContentCompact : {}) }}>
@@ -207,6 +248,9 @@ export default function TenantBookingPage() {
 
         {error ? <div style={s.errorBanner}>{error}</div> : null}
         {message ? <div style={s.successBanner}>{message}</div> : null}
+        {pendingReviewBooking ? (
+          <ReviewPrompt booking={pendingReviewBooking} onReview={() => openReview(pendingReviewBooking)} />
+        ) : null}
 
         <section style={{ ...s.activeBookingCard, ...(isCompact ? s.activeBookingCardCompact : {}) }}>
           <div style={s.activeBadge}>Latest Booking</div>
@@ -311,6 +355,7 @@ export default function TenantBookingPage() {
                             tenantSettings={tenantSettings}
                             onPay={() => openPayment(booking)}
                             onCancel={() => handleCancelBooking(booking)}
+                            onReview={() => openReview(booking)}
                           />
                         ) : null}
                       </React.Fragment>
@@ -335,6 +380,16 @@ export default function TenantBookingPage() {
           onClose={closePayment}
         />
       ) : null}
+      {reviewBooking ? (
+        <ReviewModal
+          booking={reviewBooking}
+          form={reviewForm}
+          submitting={reviewSubmitting}
+          onChange={setReviewForm}
+          onSubmit={handleSubmitReview}
+          onClose={closeReview}
+        />
+      ) : null}
     </div>
   );
 }
@@ -344,6 +399,21 @@ const MetaCard = ({ label, value }) => (
     <div style={s.metaLabel}>{label}</div>
     <div style={s.metaValue}>{value}</div>
   </div>
+);
+
+const ReviewPrompt = ({ booking, onReview }) => (
+  <section style={s.reviewPrompt}>
+    <div>
+      <div style={s.reviewPromptTitle}>Review your completed booking</div>
+      <div style={s.reviewPromptText}>
+        {booking.vehicleName || "Booked Vehicle"} finished on {formatDate(booking.endDate)}.
+      </div>
+    </div>
+    <button type="button" style={s.reviewBtn} onClick={onReview}>
+      <Star size={16} />
+      Write review
+    </button>
+  </section>
 );
 
 const BookingRow = ({ car, dateRange, location, price, status, img, expanded, onToggle }) => (
@@ -376,7 +446,7 @@ const BookingRow = ({ car, dateRange, location, price, status, img, expanded, on
   </tr>
 );
 
-const BookingDetailsRow = ({ booking, tenantSettings, onPay, onCancel }) => (
+const BookingDetailsRow = ({ booking, tenantSettings, onPay, onCancel, onReview }) => (
   <tr style={s.expandedTr}>
     <td style={s.expandedTd} colSpan={6}>
       <div style={s.expandedPanel}>
@@ -391,7 +461,12 @@ const BookingDetailsRow = ({ booking, tenantSettings, onPay, onCancel }) => (
           <MetaCard label="Payment" value={formatPaymentStatus(booking)} />
         </div>
         <div style={s.expandedActions}>
-          {canPayBooking(booking) ? (
+          {canReviewBooking(booking) ? (
+            <button type="button" style={s.reviewBtn} onClick={onReview}>
+              <Star size={16} />
+              Write review
+            </button>
+          ) : canPayBooking(booking) ? (
             <>
               {booking.status === "PENDING" ? (
                 <button type="button" style={s.cancelBtn} onClick={onCancel}>
@@ -424,6 +499,51 @@ const BookingDetailsRow = ({ booking, tenantSettings, onPay, onCancel }) => (
       </div>
     </td>
   </tr>
+);
+
+const ReviewModal = ({ booking, form, submitting, onChange, onSubmit, onClose }) => (
+  <div style={s.modalOverlay} onClick={onClose}>
+    <div style={s.modalCard} onClick={(event) => event.stopPropagation()}>
+      <div style={s.modalHeader}>
+        <div>
+          <h2 style={s.modalTitle}>Write Review</h2>
+          <p style={s.modalSubtitle}>{booking.vehicleName || "Booked Vehicle"} - {formatDateRange(booking.startDate, booking.endDate)}</p>
+        </div>
+        <button type="button" style={s.closeBtn} onClick={onClose} aria-label="Close review">
+          <X size={18} />
+        </button>
+      </div>
+
+      <div style={s.ratingRow}>
+        {[1, 2, 3, 4, 5].map((rating) => (
+          <button
+            key={rating}
+            type="button"
+            style={{ ...s.starBtn, ...(Number(form.rating) >= rating ? s.starBtnActive : {}) }}
+            onClick={() => onChange((current) => ({ ...current, rating }))}
+            aria-label={`${rating} star review`}
+          >
+            <Star size={22} fill={Number(form.rating) >= rating ? "currentColor" : "none"} />
+          </button>
+        ))}
+      </div>
+
+      <label style={s.fieldGroup}>
+        <span style={s.fieldLabel}>Comment</span>
+        <textarea
+          style={s.textarea}
+          rows={4}
+          value={form.comment}
+          onChange={(event) => onChange((current) => ({ ...current, comment: event.target.value }))}
+          placeholder="How was the booking?"
+        />
+      </label>
+
+      <button type="button" style={{ ...s.payBtnWide, ...(submitting ? s.disabledBtn : {}) }} disabled={submitting} onClick={onSubmit}>
+        {submitting ? "Submitting..." : "Submit Review"}
+      </button>
+    </div>
+  </div>
 );
 
 const PaymentModal = ({ booking, form, paying, canPay, tenantSettings, onChange, onPay, onClose }) => (
@@ -586,6 +706,14 @@ function canPayBooking(booking) {
   );
 }
 
+function canReviewBooking(booking) {
+  return (
+    booking?.status === "COMPLETED" &&
+    Boolean(booking?.reviewEligible) &&
+    !booking?.reviewSubmittedAt
+  );
+}
+
 function onlyDigits(value) {
   return (value || "").replace(/\D/g, "");
 }
@@ -619,6 +747,9 @@ const s = {
   datePicker: { display: "flex", alignItems: "center", gap: "8px", background: "#3b82f6", padding: "10px 20px", borderRadius: "10px", color: "#fff" },
   errorBanner: { background: "rgba(127, 29, 29, 0.25)", color: "#fecaca", border: "1px solid #7f1d1d", borderRadius: "14px", padding: "12px 14px", marginBottom: "20px" },
   successBanner: { background: "rgba(20, 83, 45, 0.25)", color: "#bbf7d0", border: "1px solid #14532d", borderRadius: "14px", padding: "12px 14px", marginBottom: "20px" },
+  reviewPrompt: { background: "rgba(245, 158, 11, 0.12)", color: "#fde68a", border: "1px solid rgba(245, 158, 11, 0.36)", borderRadius: "16px", padding: "16px", marginBottom: "20px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: "16px", flexWrap: "wrap" },
+  reviewPromptTitle: { color: "#fff", fontWeight: 800, marginBottom: "4px" },
+  reviewPromptText: { color: "#fcd34d", fontSize: "14px" },
   activeBookingCard: { background: "linear-gradient(135deg, #0f172a 0%, #1e293b 100%)", borderRadius: "28px", padding: "40px", border: "1px solid #334155", position: "relative", overflow: "hidden" },
   activeBookingCardCompact: { padding: "22px 18px" },
   activeBadge: { background: "rgba(59, 130, 246, 0.2)", color: "#3b82f6", padding: "6px 15px", borderRadius: "20px", fontSize: 12, fontWeight: "700", width: "fit-content", marginBottom: 20 },
@@ -650,6 +781,7 @@ const s = {
   expandedActions: { display: "flex", justifyContent: "flex-end", gap: "12px", flexWrap: "wrap" },
   payBtn: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "#2563eb", color: "#fff", border: "none", borderRadius: "12px", padding: "11px 16px", cursor: "pointer", fontWeight: 800 },
   cancelBtn: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "rgba(239,68,68,0.12)", color: "#f87171", border: "1px solid rgba(248,113,113,0.32)", borderRadius: "12px", padding: "11px 16px", cursor: "pointer", fontWeight: 800 },
+  reviewBtn: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "#f59e0b", color: "#111827", border: "none", borderRadius: "12px", padding: "11px 16px", cursor: "pointer", fontWeight: 800 },
   paidText: { color: "#94a3b8", fontSize: "14px" },
   pendingPaymentText: { color: "#fbbf24", fontSize: "14px", fontWeight: 700 },
   modalOverlay: { position: "fixed", inset: 0, background: "rgba(2, 6, 23, 0.72)", display: "flex", alignItems: "center", justifyContent: "center", padding: "24px", zIndex: 1000 },
@@ -667,6 +799,10 @@ const s = {
   fieldGroup: { display: "grid", gap: "8px" },
   fieldLabel: { color: "#94a3b8", fontSize: "13px", fontWeight: 700 },
   input: { width: "100%", background: "#111827", border: "1px solid #334155", color: "#fff", borderRadius: "12px", padding: "12px 14px", outline: "none" },
+  textarea: { width: "100%", resize: "vertical", background: "#111827", border: "1px solid #334155", color: "#fff", borderRadius: "12px", padding: "12px 14px", outline: "none", fontFamily: "inherit" },
+  ratingRow: { display: "flex", gap: "8px" },
+  starBtn: { width: "42px", height: "42px", borderRadius: "12px", border: "1px solid #334155", background: "#111827", color: "#64748b", display: "inline-flex", alignItems: "center", justifyContent: "center", cursor: "pointer" },
+  starBtnActive: { border: "1px solid rgba(245, 158, 11, 0.55)", background: "rgba(245, 158, 11, 0.15)", color: "#fbbf24" },
   paymentGrid: { display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: "12px" },
   payBtnWide: { display: "inline-flex", alignItems: "center", justifyContent: "center", gap: "8px", background: "#2563eb", color: "#fff", border: "none", borderRadius: "12px", padding: "13px 16px", cursor: "pointer", fontWeight: 800 },
   disabledBtn: { opacity: 0.55, cursor: "not-allowed" },
