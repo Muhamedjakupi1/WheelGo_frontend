@@ -48,6 +48,12 @@ export const createAdminAddon = (data) => http.post("/api/v1/admin/addons", data
 export const ensureAdminDefaultAddons = () => http.post("/api/v1/admin/addons/ensure-defaults");
 export const updateAdminAddon = (id, data) => http.patch(`/api/v1/admin/addons/${id}`, data);
 export const deleteAdminAddon = (id) => http.delete(`/api/v1/admin/addons/${id}`);
+
+export const getAdminPromotions = () => http.get("/api/v1/admin/promotions");
+export const createAdminPromotion = (data) => http.post("/api/v1/admin/promotions", data);
+export const updateAdminPromotion = (id, data) => http.patch(`/api/v1/admin/promotions/${id}`, data);
+export const deleteAdminPromotion = (id) => http.delete(`/api/v1/admin/promotions/${id}`);
+
 export const getAdminVehicles = (keyword = "") =>
   http.get("/api/v1/admin/vehicles", { params: keyword ? { keyword } : {} });
 

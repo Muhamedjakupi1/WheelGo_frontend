@@ -399,6 +399,7 @@ function VehicleDetailsModal({
     expiryMonth: "",
     expiryYear: "",
     cvv: "",
+    promotionCode: "",
   });
   const [saveMessage, setSaveMessage] = useState({ type: "", text: "" });
   const [saving, setSaving] = useState(false);
@@ -560,6 +561,7 @@ function VehicleDetailsModal({
         expiryMonth: paymentForm.expiryMonth,
         expiryYear: paymentForm.expiryYear,
         cvv: paymentForm.cvv,
+        promotionCode: paymentForm.promotionCode.trim() || null,
       });
 
       setSaveMessage({
@@ -912,8 +914,21 @@ function VehicleDetailsModal({
                     </div>
                   </div>
                   <PriceLine label="Booking total" value={formatCurrencyAmount(createdBooking?.totalPrice || finalAmount, currencySettings)} />
+                  {Number(createdBooking?.discountAmount || 0) > 0 ? (
+                    <PriceLine label="Discount" value={`-${formatCurrencyAmount(createdBooking.discountAmount, currencySettings)}`} />
+                  ) : null}
                   <PriceLine label="Payment method" value={paymentForm.method === "CASH" ? "Cash" : "Card"} />
                 </div>
+
+                <label style={ds.fieldGroup}>
+                  <span style={ds.fieldLabel}>Promotion Code</span>
+                  <input
+                    value={paymentForm.promotionCode}
+                    onChange={(e) => updatePaymentField("promotionCode", e.target.value)}
+                    style={ds.input}
+                    placeholder="WheelGo-10"
+                  />
+                </label>
 
                 <div style={ds.methodToggle}>
                   <button
