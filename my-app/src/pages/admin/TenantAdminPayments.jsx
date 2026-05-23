@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
-import { Banknote, CheckCircle2, CreditCard, RefreshCw, RotateCcw, Search } from "lucide-react";
+import { Banknote, CheckCircle2, CreditCard, Download, RefreshCw, RotateCcw, Search } from "lucide-react";
 import { getAdminBookings } from "../../api/adminApi";
+import { downloadInvoicePdf } from "../../api/invoiceApi";
 import { confirmCashPayment, getAdminPayments, refundPayment } from "../../api/paymentApi";
 import { useTenantSettings } from "../../context/TenantSettingsContext";
 import { formatCurrencyAmount } from "../../utils/currency";
@@ -12,6 +13,7 @@ export default function TenantAdminPayments() {
   const [bookingsById, setBookingsById] = useState({});
   const [loading, setLoading] = useState(true);
   const [confirmingId, setConfirmingId] = useState(null);
+  const [downloadingId, setDownloadingId] = useState(null);
   const [refundingId, setRefundingId] = useState(null);
   const [error, setError] = useState("");
   const [searchTerm, setSearchTerm] = useState("");
@@ -74,6 +76,21 @@ export default function TenantAdminPayments() {
       setError(err?.response?.data?.message || err?.response?.data?.error || "Failed to refund payment.");
     } finally {
       setRefundingId(null);
+    }
+  };
+
+  const handleDownloadInvoice = async (payment) => {
+    if (!payment?.bookingId || downloadingId) return;
+
+    try {
+      setDownloadingId(payment.id);
+      setError("");
+      const response = await downloadInvoicePdf(payment.bookingId);
+      saveBlob(response.data, `${payment.invoiceNumber || "invoice"}.pdf`);
+    } catch (err) {
+      setError(err?.response?.data?.message || err?.response?.data?.error || "Failed to download invoice.");
+    } finally {
+      setDownloadingId(null);
     }
   };
 
@@ -166,7 +183,28 @@ export default function TenantAdminPayments() {
                           {payment.method}
                         </span>
                       </td>
-                      <td style={table.cell}>{payment.invoiceNumber || "-"}</td>
+                      <td style={table.cell}>
+                        {payment.invoiceNumber ? (
+                          <button
+                            type="button"
+                            onClick={() => handleDownloadInvoice(payment)}
+                            disabled={downloadingId === payment.id}
+                            style={{
+                              ...button.secondary,
+                              display: "inline-flex",
+                              alignItems: "center",
+                              gap: "8px",
+                              opacity: downloadingId === payment.id ? 0.65 : 1,
+                              cursor: downloadingId === payment.id ? "not-allowed" : "pointer",
+                            }}
+                          >
+                            <Download size={15} />
+                            {downloadingId === payment.id ? "Downloading" : payment.invoiceNumber}
+                          </button>
+                        ) : (
+                          "-"
+                        )}
+                      </td>
                       <td style={table.cell}>{formatDate(payment.paidAt)}</td>
                       <td style={table.cell}>
                         {canConfirm ? (
@@ -268,6 +306,17 @@ function formatCalendarDate(value) {
     month: "short",
     year: "numeric",
   });
+}
+
+function saveBlob(blob, filename) {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
 }
 
 function formatPaymentStatus(payment, booking) {
