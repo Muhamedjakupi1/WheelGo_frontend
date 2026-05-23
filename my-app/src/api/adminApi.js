@@ -42,6 +42,7 @@ export const updateAdminBooking = (id, data) => http.patch(`/api/v1/admin/bookin
 export const deleteAdminBooking = (id) => http.delete(`/api/v1/admin/bookings/${id}`);
 export const confirmAdminBooking = (id, data) => http.patch(`/api/v1/admin/bookings/${id}/confirm`, data);
 export const rejectAdminBooking = (id, data = {}) => http.patch(`/api/v1/admin/bookings/${id}/reject`, data);
+export const getAdminReviews = () => http.get("/api/v1/admin/reviews");
 
 export const getAdminAddons = () => http.get("/api/v1/admin/addons");
 export const createAdminAddon = (data) => http.post("/api/v1/admin/addons", data);

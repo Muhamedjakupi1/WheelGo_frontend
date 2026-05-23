@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Outlet, NavLink, useParams, useNavigate } from "react-router-dom";
-import { LayoutGrid, Clock, Settings, User, Headphones, LogOut, CreditCard } from "lucide-react";
+import { LayoutGrid, Clock, Settings, User, Headphones, LogOut, CreditCard, Star } from "lucide-react";
 import { useAuth } from "../../context/AuthContext";
 
 export default function UserLayout() {
@@ -42,6 +42,7 @@ export default function UserLayout() {
         <nav style={{ ...s.nav, ...(isCompact ? s.navCompact : {}) }}>
           <NavItem to={`/t/${tenantSlug}/app`} icon={<LayoutGrid size={20} />} label="Dashboard" />
            <NavItem to={`/t/${tenantSlug}/bookings`} icon={<Clock size={20} />} label="My Booking" /> 
+          <NavItem to={`/t/${tenantSlug}/reviews`} icon={<Star size={20} />} label="Reviews" />
           <NavItem to={`/t/${tenantSlug}/payments`} icon={<CreditCard size={20} />} label="Payments" />
           <NavItem to={`/t/${tenantSlug}/settings`} icon={<Settings size={20} />} label="Settings" /> 
           <NavItem to={`/t/${tenantSlug}/profile`} icon={<User size={20} />} label="Profile" /> 

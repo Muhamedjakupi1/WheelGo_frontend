@@ -14,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  Star,
 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
@@ -22,6 +23,7 @@ import { createBooking } from "../../api/bookingApi";
 import { getAddons } from "../../api/addonApi";
 import { getMyDriverLicense } from "../../api/driverLicenseApi";
 import { payForBooking } from "../../api/paymentApi";
+import { getVehicleReviews } from "../../api/reviewApi";
 import { getVehicles } from "../../api/vehicleApi";
 import { useIsCompactLayout } from "../../hooks/useIsCompactLayout";
 import { formatCurrencyAmount, formatCurrencyPerDay } from "../../utils/currency";
@@ -406,6 +408,9 @@ function VehicleDetailsModal({
   const [paying, setPaying] = useState(false);
   const [checkingLicense, setCheckingLicense] = useState(false);
   const [showLicensePrompt, setShowLicensePrompt] = useState(false);
+  const [vehicleReviews, setVehicleReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(true);
+  const [reviewsError, setReviewsError] = useState("");
 
   // Fetch addons nga API
   useEffect(() => {
@@ -416,10 +421,45 @@ function VehicleDetailsModal({
       .catch((err) => console.error("Gabim gjatë marrjes së addons:", err));
   }, []);
 
+  useEffect(() => {
+    let active = true;
+    setReviewsLoading(true);
+    setReviewsError("");
+
+    getVehicleReviews(vehicle.id)
+      .then((response) => {
+        if (active) {
+          setVehicleReviews(Array.isArray(response.data) ? response.data : []);
+        }
+      })
+      .catch((error) => {
+        if (active) {
+          setVehicleReviews([]);
+          setReviewsError(error?.response?.data?.message || "Failed to load reviews.");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setReviewsLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [vehicle.id]);
+
   const selectableAddons = useMemo(
     () => addons.filter((addon) => addon?.isActive),
     [addons]
   );
+  const averageReviewRating = useMemo(() => {
+    if (vehicleReviews.length === 0) {
+      return null;
+    }
+    const total = vehicleReviews.reduce((sum, review) => sum + Number(review.rating || 0), 0);
+    return (total / vehicleReviews.length).toFixed(1);
+  }, [vehicleReviews]);
 
   const imageUrl = galleryImages[activeImageIndex] || fallbackImage;
   const canSlide = galleryImages.length > 1;
@@ -758,6 +798,13 @@ function VehicleDetailsModal({
                     {formatEnumLabel(vehicle.status)}
                   </div>
                 </div>
+
+                <VehicleReviewList
+                  reviews={vehicleReviews}
+                  loading={reviewsLoading}
+                  error={reviewsError}
+                  averageRating={averageReviewRating}
+                />
               </>
             ) : panelMode === "book" ? (
               <>
@@ -1088,6 +1135,59 @@ function PriceLine({ label, value }) {
   );
 }
 
+function VehicleReviewList({ reviews, loading, error, averageRating }) {
+  return (
+    <section style={ds.reviewSection}>
+      <div style={ds.reviewSectionHeader}>
+        <div>
+          <div style={ds.detailLabel}>Reviews</div>
+          <div style={ds.reviewSummary}>
+            {averageRating ? `${averageRating} average from ${reviews.length} review(s)` : "Customer reviews for this car"}
+          </div>
+        </div>
+        {averageRating ? <RatingStars value={Math.round(Number(averageRating))} /> : null}
+      </div>
+
+      {loading ? (
+        <div style={ds.reviewEmpty}>Loading reviews...</div>
+      ) : error ? (
+        <div style={ds.reviewError}>{error}</div>
+      ) : reviews.length === 0 ? (
+        <div style={ds.reviewEmpty}>No reviews for this car yet.</div>
+      ) : (
+        <div style={ds.reviewList}>
+          {reviews.slice(0, 4).map((review) => (
+            <article key={review.id} style={ds.reviewItem}>
+              <div style={ds.reviewItemHeader}>
+                <div>
+                  <div style={ds.reviewCustomer}>{review.customerEmail || "Customer"}</div>
+                  <div style={ds.reviewDate}>{formatDateOnly(review.createdAt)}</div>
+                </div>
+                <RatingStars value={review.rating} />
+              </div>
+              <p style={ds.reviewComment}>{review.comment || "No comment added."}</p>
+            </article>
+          ))}
+        </div>
+      )}
+    </section>
+  );
+}
+
+function RatingStars({ value }) {
+  return (
+    <div style={ds.reviewStars}>
+      {[1, 2, 3, 4, 5].map((rating) => (
+        <Star
+          key={rating}
+          size={15}
+          fill={Number(value) >= rating ? "currentColor" : "none"}
+        />
+      ))}
+    </div>
+  );
+}
+
 function AddonQuantityRow({ label, price, available, value, onChange, currencySettings }) {
   const stock = Number(available ?? 0);
 
@@ -1230,6 +1330,15 @@ function formatEnumLabel(value) {
     .split("_")
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
+}
+
+function formatDateOnly(value) {
+  if (!value) return "-";
+  return new Date(value).toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function calculateRentalDays(startDate, endDate) {
@@ -1667,6 +1776,40 @@ const ds = {
   },
   detailLabel: { color: "#94a3b8", fontSize: "13px", marginBottom: "6px" },
   detailValue: { fontWeight: 600 },
+  reviewSection: {
+    background: "#111827",
+    border: "1px solid #1f2937",
+    borderRadius: "14px",
+    padding: "14px",
+    display: "grid",
+    gap: "12px",
+  },
+  reviewSectionHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "12px",
+    alignItems: "flex-start",
+  },
+  reviewSummary: { color: "#cbd5e1", fontWeight: 700 },
+  reviewList: { display: "grid", gap: "10px" },
+  reviewItem: {
+    background: "#0b1220",
+    border: "1px solid #1f2937",
+    borderRadius: "12px",
+    padding: "12px",
+  },
+  reviewItemHeader: {
+    display: "flex",
+    justifyContent: "space-between",
+    gap: "10px",
+    alignItems: "flex-start",
+  },
+  reviewCustomer: { color: "#fff", fontWeight: 700, fontSize: "13px" },
+  reviewDate: { color: "#64748b", fontSize: "12px", marginTop: "3px" },
+  reviewStars: { display: "flex", gap: "2px", color: "#fbbf24" },
+  reviewComment: { color: "#cbd5e1", lineHeight: 1.5, margin: "10px 0 0", fontSize: "13px" },
+  reviewEmpty: { color: "#64748b", fontSize: "13px" },
+  reviewError: { color: "#fecaca", fontSize: "13px" },
   bookingGrid: {
     display: "grid",
     gridTemplateColumns: "repeat(auto-fit, minmax(min(100%, 220px), 1fr))",
