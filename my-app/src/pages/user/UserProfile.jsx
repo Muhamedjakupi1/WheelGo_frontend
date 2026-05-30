@@ -180,8 +180,11 @@ export default function TenantUserProfile() {
   const memberSince = profile?.memberSince
     ? new Date(profile.memberSince).toLocaleDateString()
     : "-";
-  const confirmedRideCount = bookings.filter((booking) => booking?.status === "CONFIRMED").length;
-  const totalRides = String(confirmedRideCount);
+  const completedRideCount =
+    typeof profile?.totalRides === "number"
+      ? profile.totalRides
+      : bookings.filter((booking) => booking?.status === "COMPLETED").length;
+  const totalRides = String(completedRideCount);
   const userRating =
     typeof profile?.averageRating === "number" && Number.isFinite(profile.averageRating)
       ? profile.averageRating.toFixed(1)
