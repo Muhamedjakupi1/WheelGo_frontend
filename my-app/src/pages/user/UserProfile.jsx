@@ -235,7 +235,7 @@ export default function TenantUserProfile() {
       setLicensePreviews({ front: "", back: "" });
       setLicenseMessage({
         type: data.verified ? "success" : "error",
-        text: data.verified ? "AI verification passed and details were saved." : "AI verification failed. Details were saved, but the photos do not look valid.",
+        text: data.verified ? "OCR verification passed and details were saved." : "OCR verification failed. Details were saved, but the entered details do not match the photos.",
       });
     } catch (err) {
       console.error("Failed to verify driver license", err);
@@ -329,7 +329,7 @@ export default function TenantUserProfile() {
             <div>
               <h2 style={s.cardTitle}>Driver License Verification</h2>
               <p style={s.licenseSubtitle}>
-                Enter the license details, choose both sides, then verify. Everything is saved during AI verification.
+                Enter the license details, choose both sides, then verify. Everything is saved during OCR verification.
               </p>
             </div>
             <span style={license?.verified ? s.verifiedBadge : s.pendingBadge}>{licenseStatus}</span>
@@ -362,7 +362,7 @@ export default function TenantUserProfile() {
 
           <div style={s.licenseActions}>
             <button style={s.primaryBtn} type="button" onClick={handleVerifyLicense} disabled={licenseVerifying}>
-              <Save size={18} /> {licenseVerifying ? "Verifying..." : "Verify With AI"}
+              <Save size={18} /> {licenseVerifying ? "Verifying..." : "Verify"}
             </button>
           </div>
 
@@ -383,10 +383,14 @@ export default function TenantUserProfile() {
 
           {verification ? (
             <div style={s.verificationPanel}>
-              <h3 style={s.verificationTitle}>AI Verification Result</h3>
+              <h3 style={s.verificationTitle}>Verification Result</h3>
               <div style={{ ...s.verificationGrid, ...(isCompact ? s.verificationGridCompact : {}) }}>
                 <InfoRow icon={<User size={18} />} label="Verdict" value={verification.verdict || "-"} />
-                <InfoRow icon={<Star size={18} />} label="AI Decision" value={verification.verified ? "Yes" : "No"} />
+                <InfoRow icon={<Star size={18} />} label="Final Decision" value={verification.verified ? "Yes" : "No"} />
+                <InfoRow icon={<Star size={18} />} label="License Number" value={verification.licenseNumberMatches ? "Matches" : "Mismatch"} />
+                <InfoRow icon={<Star size={18} />} label="Issuing Country" value={verification.issuingCountryMatches ? "Matches" : "Mismatch"} />
+                <InfoRow icon={<Star size={18} />} label="Expiry Date" value={verification.expiryDateMatches ? "Matches" : "Mismatch"} />
+                <InfoRow icon={<Star size={18} />} label="Profile Name" value={verification.profileNameMatches ? "Matches" : "Mismatch"} />
               </div>
               <div style={s.verificationMeta}>
                 <p style={s.verificationText}>Recommendation: {verification.recommendation || "-"}</p>
