@@ -232,7 +232,7 @@ export default function TenantUserProfile() {
       setLicensePreviews({ front: "", back: "" });
       setLicenseMessage({
         type: data.verified ? "success" : "error",
-        text: data.verified ? "AI verification passed and details were saved." : "AI verification failed. Details were saved, but the photos do not look valid.",
+        text: data.verified ? "AI and OCR verification passed and details were saved." : "AI and OCR verification failed. Details were saved, but the entered details do not match the photos.",
       });
     } catch (err) {
       console.error("Failed to verify driver license", err);
@@ -326,7 +326,7 @@ export default function TenantUserProfile() {
             <div>
               <h2 style={s.cardTitle}>Driver License Verification</h2>
               <p style={s.licenseSubtitle}>
-                Enter the license details, choose both sides, then verify. Everything is saved during AI verification.
+                Enter the license details, choose both sides, then verify. Everything is saved during AI and OCR verification.
               </p>
             </div>
             <span style={license?.verified ? s.verifiedBadge : s.pendingBadge}>{licenseStatus}</span>
@@ -359,7 +359,7 @@ export default function TenantUserProfile() {
 
           <div style={s.licenseActions}>
             <button style={s.primaryBtn} type="button" onClick={handleVerifyLicense} disabled={licenseVerifying}>
-              <Save size={18} /> {licenseVerifying ? "Verifying..." : "Verify With AI"}
+              <Save size={18} /> {licenseVerifying ? "Verifying with AI and OCR..." : "Verify"}
             </button>
           </div>
 
