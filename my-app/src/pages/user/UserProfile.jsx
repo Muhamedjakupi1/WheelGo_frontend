@@ -180,8 +180,11 @@ export default function TenantUserProfile() {
   const memberSince = profile?.memberSince
     ? new Date(profile.memberSince).toLocaleDateString()
     : "-";
-  const confirmedRideCount = bookings.filter((booking) => booking?.status === "CONFIRMED").length;
-  const totalRides = String(confirmedRideCount);
+  const completedRideCount =
+    typeof profile?.totalRides === "number"
+      ? profile.totalRides
+      : bookings.filter((booking) => booking?.status === "COMPLETED").length;
+  const totalRides = String(completedRideCount);
   const userRating =
     typeof profile?.averageRating === "number" && Number.isFinite(profile.averageRating)
       ? profile.averageRating.toFixed(1)
@@ -380,10 +383,14 @@ export default function TenantUserProfile() {
 
           {verification ? (
             <div style={s.verificationPanel}>
-              <h3 style={s.verificationTitle}>AI Verification Result</h3>
+              <h3 style={s.verificationTitle}>Verification Result</h3>
               <div style={{ ...s.verificationGrid, ...(isCompact ? s.verificationGridCompact : {}) }}>
                 <InfoRow icon={<User size={18} />} label="Verdict" value={verification.verdict || "-"} />
-                <InfoRow icon={<Star size={18} />} label="AI Decision" value={verification.verified ? "Yes" : "No"} />
+                <InfoRow icon={<Star size={18} />} label="Final Decision" value={verification.verified ? "Yes" : "No"} />
+                <InfoRow icon={<Star size={18} />} label="License Number" value={verification.licenseNumberMatches ? "Matches" : "Mismatch"} />
+                <InfoRow icon={<Star size={18} />} label="Issuing Country" value={verification.issuingCountryMatches ? "Matches" : "Mismatch"} />
+                <InfoRow icon={<Star size={18} />} label="Expiry Date" value={verification.expiryDateMatches ? "Matches" : "Mismatch"} />
+                <InfoRow icon={<Star size={18} />} label="Profile Name" value={verification.profileNameMatches ? "Matches" : "Mismatch"} />
               </div>
               <div style={s.verificationMeta}>
                 <p style={s.verificationText}>Recommendation: {verification.recommendation || "-"}</p>
